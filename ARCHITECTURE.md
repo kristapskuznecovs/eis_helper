@@ -1,12 +1,13 @@
-# Architecture Rules
+# Architecture
 
-This repository is a modular monolith with:
+This is a modular monolith with:
 
-- Next.js frontend in `apps/web`
+- Next.js 15 frontend in `apps/web`
 - FastAPI backend in `backend`
-- PostgreSQL + SQLAlchemy ORM + Alembic
-- optional async workers
-- AI/document processing behind provider abstractions
+- PostgreSQL as the primary database (users, auth, procurements)
+- SQLite as a read-only analytics database (`database/eis_procurement_records.sqlite`)
+- OpenAI for procurement classification and conversational search
+- Optional async workers via Celery + Redis
 
 ## Hard rules
 
@@ -31,9 +32,10 @@ This repository is a modular monolith with:
 
 ## Data rules
 
-- `database/` is checked in.
-- `data/` is gitignored.
+- `database/` is checked in (read-only SQLite for analytics).
+- `data/` is gitignored (uploads, OCR output, exports).
 - Uploaded files, OCR output, and exports are runtime data, not source code.
+- The SQLite analytics database is populated by the extraction pipeline, not by migrations.
 
 ## Backend seams
 
@@ -41,7 +43,7 @@ This repository is a modular monolith with:
 - AI provider code lives only in `shared/ai/`.
 - Queue implementation details live only in `shared/jobs/`.
 - Storage implementation details live only in `shared/storage/`.
-- Modules must request storage through a shared storage factory, not import a concrete backend directly.
+- Modules must request storage through the shared storage factory, not import a concrete backend directly.
 
 ## Queue
 
@@ -59,10 +61,31 @@ This repository is a modular monolith with:
 
 ## Auth
 
-- Base template auth is email/password plus JWT access token.
+- Auth is email/password plus JWT access token.
 - Password minimum is 8 characters with at least one uppercase letter and one digit.
-- Refresh-token rotation is an optional extension, not part of the base template.
+- Refresh-token rotation is an optional extension, not part of the base.
 - Auth validation must have explicit test coverage.
+
+## Extraction pipeline
+
+The extraction module (`modules/extraction/`) is the largest module and owns the full data lifecycle:
+
+1. **CKAN sync** (`fetch_ckan_raw.py`) — pulls procurement datasets from data.gov.lv into PostgreSQL raw tables
+2. **Classification** (`fetch_metadata.py`) — calls OpenAI to classify procurements (construction vs other, work type, asset scale)
+3. **Analytics build** (`eis_analytics.py`) — query layer over the SQLite database, used by dashboard endpoints
+4. **Storage** (`collector_storage.py`) — writes classified records into SQLite and PostgreSQL
+
+The SQLite file at `database/eis_procurement_records.sqlite` is the source for all analytics dashboards. It is populated offline by the pipeline and committed when updated. It is never written to by request handlers.
+
+## Internationalization
+
+- Default locale is `lv`; English (`en`) is also supported.
+- Backend locale is resolved once per request from `X-Locale`, then optional `lang`, then `Accept-Language`, then fallback to `lv`.
+- Locale is bound to request context; services must not thread locale through function signatures.
+- Services and domain code must not emit user-facing strings directly when a stable translation key is possible.
+- Backend translation happens at the API boundary and error-handler layer.
+- Missing translations fall back in this order: requested locale → default locale → translation key.
+- Frontend routes are locale-prefixed (`/lv/...`, `/en/...`) and locale switching must preserve the current route when possible.
 
 ## Logging and errors
 
@@ -70,14 +93,11 @@ This repository is a modular monolith with:
 - Every log line must include the active `request_id`.
 - Auth resolution may bind `user_id` into logging context.
 - Tasks must clear and bind fresh context before work starts.
-- API errors must use a standardized JSON error envelope.
+- API errors must use the standardized JSON error envelope: `{ "error": { "code", "message", "request_id" } }`.
 
-## Internationalization
+## Domain conventions
 
-- Default locale is `lv`; additional supported locales are defined centrally in shared config.
-- Backend locale is resolved once per request from `X-Locale`, then optional `lang`, then `Accept-Language`, then fallback.
-- Locale is bound to request context; services must not thread locale through function signatures.
-- Services and domain code must not emit user-facing strings directly when a stable translation key is possible.
-- Backend translation happens at the API boundary and error-handler layer.
-- Missing translations fall back in this order: requested locale, default locale, translation key.
-- Frontend routes are locale-prefixed (`/lv/...`, `/en/...`) and locale switching must preserve the current route when possible.
+- Procurement statuses are Latvian strings from EIS. Open statuses: `Izsludināts`, `Pieteikumi/piedāvājumi atvērti`. The chat assistant must only surface open tenders.
+- Planning regions are derived from the `delivery_location` field and mapped to one of six regions: Rīga, Vidzeme, Kurzeme, Zemgale, Latgale, Pierīga.
+- Company names are normalized by stripping Latvian legal designations (`SIA`, `AS`, `PSIA`, etc.) before matching.
+- CPV prefix `45` covers construction. The system is designed to be extended to other CPV sectors without structural changes.

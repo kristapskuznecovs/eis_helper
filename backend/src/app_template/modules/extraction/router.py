@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, List, Optional
+from typing import Annotated
 
 from fastapi import APIRouter, Query
 
@@ -21,11 +21,11 @@ def _get_service() -> AnalyticsService:
 
 @router.get("")
 def get_dashboard(
-    year: Annotated[Optional[int], Query()] = None,
-    planning_region: Annotated[Optional[str], Query()] = None,
-    multi_lot: Annotated[Optional[bool], Query()] = None,
-    buyer: Annotated[Optional[str], Query()] = None,
-    category: Annotated[Optional[str], Query()] = None,
+    year: Annotated[int | None, Query()] = None,
+    planning_region: Annotated[str | None, Query()] = None,
+    multi_lot: Annotated[bool | None, Query()] = None,
+    buyer: Annotated[str | None, Query()] = None,
+    category: Annotated[str | None, Query()] = None,
 ) -> dict:
     filters = Filters(year=year, planning_region=planning_region, multi_lot=multi_lot, buyer=buyer, category=category)
     return _get_service().build_dashboard(filters)
@@ -33,25 +33,25 @@ def get_dashboard(
 
 @router.get("/company")
 def get_company(
-    company: Annotated[List[str], Query()] = [],
-    year: Annotated[Optional[int], Query()] = None,
-    planning_region: Annotated[Optional[str], Query()] = None,
-    multi_lot: Annotated[Optional[bool], Query()] = None,
-    buyer: Annotated[Optional[str], Query()] = None,
-    category: Annotated[Optional[str], Query()] = None,
+    company: Annotated[list[str] | None, Query()] = None,
+    year: Annotated[int | None, Query()] = None,
+    planning_region: Annotated[str | None, Query()] = None,
+    multi_lot: Annotated[bool | None, Query()] = None,
+    buyer: Annotated[str | None, Query()] = None,
+    category: Annotated[str | None, Query()] = None,
 ) -> dict:
     filters = Filters(year=year, planning_region=planning_region, multi_lot=multi_lot, buyer=buyer, category=category)
-    return _get_service().build_company_view(filters, company)
+    return _get_service().build_company_view(filters, company or [])
 
 
 @router.get("/purchaser")
 def get_purchaser(
-    purchaser: Annotated[Optional[str], Query()] = None,
-    year: Annotated[Optional[int], Query()] = None,
-    planning_region: Annotated[Optional[str], Query()] = None,
-    multi_lot: Annotated[Optional[bool], Query()] = None,
-    buyer: Annotated[Optional[str], Query()] = None,
-    category: Annotated[Optional[str], Query()] = None,
+    purchaser: Annotated[str | None, Query()] = None,
+    year: Annotated[int | None, Query()] = None,
+    planning_region: Annotated[str | None, Query()] = None,
+    multi_lot: Annotated[bool | None, Query()] = None,
+    buyer: Annotated[str | None, Query()] = None,
+    category: Annotated[str | None, Query()] = None,
 ) -> dict:
     filters = Filters(year=year, planning_region=planning_region, multi_lot=multi_lot, buyer=buyer, category=category)
     return _get_service().build_purchaser_view(filters, purchaser)
@@ -59,11 +59,11 @@ def get_purchaser(
 
 @router.get("/risk")
 def get_risk(
-    year: Annotated[Optional[int], Query()] = None,
-    planning_region: Annotated[Optional[str], Query()] = None,
-    multi_lot: Annotated[Optional[bool], Query()] = None,
-    buyer: Annotated[Optional[str], Query()] = None,
-    category: Annotated[Optional[str], Query()] = None,
+    year: Annotated[int | None, Query()] = None,
+    planning_region: Annotated[str | None, Query()] = None,
+    multi_lot: Annotated[bool | None, Query()] = None,
+    buyer: Annotated[str | None, Query()] = None,
+    category: Annotated[str | None, Query()] = None,
 ) -> dict:
     filters = Filters(year=year, planning_region=planning_region, multi_lot=multi_lot, buyer=buyer, category=category)
     return _get_service().build_risk_view(filters)
@@ -73,11 +73,11 @@ def get_risk(
 def get_projects(
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
-    year: Annotated[Optional[int], Query()] = None,
-    planning_region: Annotated[Optional[str], Query()] = None,
-    multi_lot: Annotated[Optional[bool], Query()] = None,
-    buyer: Annotated[Optional[str], Query()] = None,
-    category: Annotated[Optional[str], Query()] = None,
+    year: Annotated[int | None, Query()] = None,
+    planning_region: Annotated[str | None, Query()] = None,
+    multi_lot: Annotated[bool | None, Query()] = None,
+    buyer: Annotated[str | None, Query()] = None,
+    category: Annotated[str | None, Query()] = None,
 ) -> dict:
     filters = Filters(year=year, planning_region=planning_region, multi_lot=multi_lot, buyer=buyer, category=category)
     return _get_service().list_projects(filters, limit=limit, offset=offset)

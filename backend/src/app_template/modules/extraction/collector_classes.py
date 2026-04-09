@@ -3,29 +3,29 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
 import json
 import random
 import re
 import threading
 import time
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, Optional, Set, Tuple
+from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from .utils import render_prompt_template
 
-CLASSIFICATION_DOMAINS: Set[str] = {
+CLASSIFICATION_DOMAINS: set[str] = {
     "building",
     "infrastructure",
     "maintenance_service",
     "non_construction",
     "unknown",
 }
-CLASSIFICATION_SCOPE_TYPES: Set[str] = {
+CLASSIFICATION_SCOPE_TYPES: set[str] = {
     "design_only",
     "design_build",
     "build_only",
@@ -33,7 +33,7 @@ CLASSIFICATION_SCOPE_TYPES: Set[str] = {
     "service_only",
     "unknown",
 }
-CLASSIFICATION_WORK_TYPES: Set[str] = {
+CLASSIFICATION_WORK_TYPES: set[str] = {
     "new_build",
     "renovation",
     "repair",
@@ -41,8 +41,8 @@ CLASSIFICATION_WORK_TYPES: Set[str] = {
     "cleaning",
     "unknown",
 }
-CLASSIFICATION_ASSET_SCALES: Set[str] = {"large", "small", "unknown"}
-CLASSIFICATION_FINAL_CATEGORIES: Set[str] = {
+CLASSIFICATION_ASSET_SCALES: set[str] = {"large", "small", "unknown"}
+CLASSIFICATION_FINAL_CATEGORIES: set[str] = {
     "building_design",
     "building_design_build",
     "building_supervision",
@@ -74,7 +74,7 @@ DEFAULT_OUTCOME_LLM_TEXT_LIMIT = 20000
 
 
 def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def normalize_classification_label(value: Any) -> str:
@@ -108,7 +108,7 @@ def normalize_classification_label(value: Any) -> str:
     return mapped if mapped in CLASSIFICATION_FINAL_CATEGORIES else "unknown"
 
 
-def _normalize_enum(value: Any, allowed: Set[str], synonyms: Dict[str, str]) -> str:
+def _normalize_enum(value: Any, allowed: set[str], synonyms: dict[str, str]) -> str:
     text = str(value or "").strip().lower()
     if text in allowed:
         return text
@@ -190,7 +190,7 @@ def normalize_asset_scale(value: Any) -> str:
     )
 
 
-def _coerce_threshold_value(value: Any) -> Optional[float]:
+def _coerce_threshold_value(value: Any) -> float | None:
     if isinstance(value, (int, float)):
         return float(value)
     try:
@@ -202,7 +202,7 @@ def _coerce_threshold_value(value: Any) -> Optional[float]:
 
 def resolve_scale_threshold(
     final_category: Any,
-    scale_thresholds: Optional[Dict[str, Any]] = None,
+    scale_thresholds: dict[str, Any] | None = None,
 ) -> float:
     thresholds = scale_thresholds if isinstance(scale_thresholds, dict) else {}
     category_thresholds = thresholds.get("by_final_category")
@@ -222,7 +222,7 @@ def derive_asset_scale(
     fallback_value: Any = None,
     *,
     final_category: Any = None,
-    scale_thresholds: Optional[Dict[str, Any]] = None,
+    scale_thresholds: dict[str, Any] | None = None,
 ) -> str:
     if isinstance(estimated_value_eur, (int, float)):
         threshold = resolve_scale_threshold(final_category, scale_thresholds)
@@ -277,10 +277,10 @@ def derive_final_category(
 
 
 def normalize_classification_result(
-    parsed: Dict[str, Any],
+    parsed: dict[str, Any],
     estimated_value_eur: Any,
-    scale_thresholds: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    scale_thresholds: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     domain = normalize_domain(parsed.get("domain"))
     scope_type = normalize_scope_type(parsed.get("scope_type"))
     work_type = normalize_work_type(parsed.get("work_type"))
@@ -302,7 +302,7 @@ def normalize_classification_result(
     }
 
 
-def extract_json_object_from_text(text: str) -> Dict[str, Any]:
+def extract_json_object_from_text(text: str) -> dict[str, Any]:
     stripped = text.strip()
     if not stripped:
         return {}
@@ -333,8 +333,8 @@ def extract_first_nonempty_line(text: str) -> str:
 
 
 def validate_model_output_against_schema(
-    parsed: Dict[str, Any],
-    output_schema: Optional[Dict[str, Any]],
+    parsed: dict[str, Any],
+    output_schema: dict[str, Any] | None,
 ) -> None:
     if not output_schema:
         return
@@ -394,7 +394,7 @@ class RequestPacer:
             time.sleep(sleep_seconds)
 
 
-REQUEST_PACER: Optional[RequestPacer] = None
+REQUEST_PACER: RequestPacer | None = None
 
 
 def configure_request_pacer(
@@ -440,17 +440,17 @@ class OpenAIClassifier:
     top_p: float = DEFAULT_OPENAI_TOP_P
     max_output_tokens: int = DEFAULT_OPENAI_MAX_OUTPUT_TOKENS
     response_format: str = DEFAULT_OPENAI_RESPONSE_FORMAT
-    output_schema: Optional[Dict[str, Any]] = None
-    tools_allowed: Optional[list[str]] = None
+    output_schema: dict[str, Any] | None = None
+    tools_allowed: list[str] | None = None
     show_sources: bool = True
     history_enabled: bool = False
-    history_path: Optional[Path] = None
+    history_path: Path | None = None
     history_store_raw_responses: bool = True
-    history_max_entries: Optional[int] = None
-    scale_thresholds: Optional[Dict[str, Any]] = None
+    history_max_entries: int | None = None
+    scale_thresholds: dict[str, Any] | None = None
     _history_lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
-    def append_history(self, row: Dict[str, Any]) -> None:
+    def append_history(self, row: dict[str, Any]) -> None:
         if not self.history_enabled or self.history_path is None:
             return
         self.history_path.parent.mkdir(parents=True, exist_ok=True)
@@ -466,7 +466,7 @@ class OpenAIClassifier:
                 except OSError:
                     pass
 
-    def classify(self, project: Dict[str, Any]) -> Dict[str, Any]:
+    def classify(self, project: dict[str, Any]) -> dict[str, Any]:
         if not self.api_key:
             raise RuntimeError("OPENAI_API_KEY is missing")
         system_prompt = render_prompt_template(
@@ -503,7 +503,7 @@ class OpenAIClassifier:
         if self.response_format == "json_object":
             body["response_format"] = {"type": "json_object"}
         url = f"{self.base_url.rstrip('/')}/chat/completions"
-        last_error: Optional[Exception] = None
+        last_error: Exception | None = None
         for attempt in range(1, self.retries + 1):
             request = Request(
                 url=url,
@@ -605,7 +605,7 @@ class OutcomeLLMExtractor:
     top_p: float = DEFAULT_OUTCOME_LLM_TOP_P
     max_output_tokens: int = DEFAULT_OUTCOME_LLM_MAX_OUTPUT_TOKENS
     text_limit: int = DEFAULT_OUTCOME_LLM_TEXT_LIMIT
-    vision_model: Optional[str] = None  # Model to use for vision/image extraction (defaults to main model)
+    vision_model: str | None = None  # Model to use for vision/image extraction (defaults to main model)
     config_dir: Path = field(default_factory=lambda: Path("config/agents/outcome_extractor"))
     provider: str = "openai"  # "openai" or "anthropic"
     request_delay_seconds: float = 0.0  # Delay between API calls to avoid rate limits
@@ -642,7 +642,7 @@ class OutcomeLLMExtractor:
             raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
         return prompt_path.read_text(encoding="utf-8").strip()
 
-    def detect_multi_lot(self, report_text: str) -> Dict[str, Any]:
+    def detect_multi_lot(self, report_text: str) -> dict[str, Any]:
         """
         Detect if document contains multi-lot procurement using dedicated agent.
 
@@ -695,8 +695,8 @@ class OutcomeLLMExtractor:
         self,
         report_text: str,
         lot_count: int,
-        participants: list[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        participants: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """
         Extract lot-level winner information for multi-lot procurements.
 
@@ -758,10 +758,10 @@ class OutcomeLLMExtractor:
 
     def extract_from_images(
         self,
-        project: Dict[str, Any],
+        project: dict[str, Any],
         file_name: str,
         images_base64: list[str],
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Extract from PDF images using Vision API (for scanned PDFs)."""
         if not self.api_key:
             raise RuntimeError("Outcome LLM API key is missing")
@@ -781,7 +781,7 @@ class OutcomeLLMExtractor:
 
         if self.provider == "anthropic":
             # Claude format - images in content blocks
-            content = [{"type": "text", "text": user_text}]
+            content: list[dict[str, Any]] = [{"type": "text", "text": user_text}]
             for img_b64 in images_base64[:10]:
                 content.append({
                     "type": "image",
@@ -853,10 +853,10 @@ class OutcomeLLMExtractor:
 
     def extract(
         self,
-        project: Dict[str, Any],
+        project: dict[str, Any],
         file_name: str,
         report_text: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         if not self.api_key:
             raise RuntimeError("Outcome LLM API key is missing")
 
@@ -900,7 +900,7 @@ class OutcomeLLMExtractor:
 
         return self._call_api(body)
 
-    def _call_api(self, body: Dict[str, Any]) -> Dict[str, Any]:
+    def _call_api(self, body: dict[str, Any]) -> dict[str, Any]:
         """Make API call with retry logic and rate limit handling."""
         if self.provider == "anthropic":
             url = f"{self.base_url.rstrip('/')}/v1/messages"
@@ -918,7 +918,7 @@ class OutcomeLLMExtractor:
                 "User-Agent": "eis-building-docs-scanner/1.0",
             }
 
-        last_error: Optional[Exception] = None
+        last_error: Exception | None = None
         for attempt in range(1, self.retries + 1):
             # Add delay before request to avoid rate limits
             if self.request_delay_seconds > 0 and attempt == 1:
@@ -981,9 +981,9 @@ class CKANClient:
     retries: int = 4
     retry_backoff_seconds: float = 1.5
 
-    def call(self, action: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    def call(self, action: str, params: dict[str, Any]) -> dict[str, Any]:
         url = f"{self.action_url.rstrip('/')}/{action}?{urlencode(params, doseq=True)}"
-        last_error: Optional[Exception] = None
+        last_error: Exception | None = None
         for attempt in range(1, self.retries + 1):
             req = Request(url, headers={"Accept": "application/json", "User-Agent": "eis-building-docs-scanner/1.0"})
             try:
@@ -1002,10 +1002,10 @@ class CKANClient:
             f"Request to CKAN action '{action}' failed after {self.retries} attempts: {last_error}"
         )
 
-    def package_show(self, package_id: str) -> Dict[str, Any]:
+    def package_show(self, package_id: str) -> dict[str, Any]:
         return self.call("package_show", {"id": package_id})
 
-    def datastore_search(self, resource_id: str, limit: int, offset: int, include_total: bool) -> Dict[str, Any]:
+    def datastore_search(self, resource_id: str, limit: int, offset: int, include_total: bool) -> dict[str, Any]:
         return self.call(
             "datastore_search",
             {

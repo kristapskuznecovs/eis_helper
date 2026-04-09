@@ -8,7 +8,7 @@ import os
 import re
 import unicodedata
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 from urllib.request import Request
 
 
@@ -52,7 +52,7 @@ def load_dotenv_file(path: Path, override: bool = False) -> int:
     return loaded
 
 
-def render_prompt_template(template: str, replacements: Dict[str, str]) -> str:
+def render_prompt_template(template: str, replacements: dict[str, str]) -> str:
     """Replace {{KEY}} placeholders in a prompt template."""
     rendered = template
     for key, value in replacements.items():
@@ -60,7 +60,7 @@ def render_prompt_template(template: str, replacements: Dict[str, str]) -> str:
     return rendered
 
 
-def extract_js_array(html_text: str, variable_name: str) -> list[Dict[str, Any]]:
+def extract_js_array(html_text: str, variable_name: str) -> list[dict[str, Any]]:
     """Extract and decode a JS array assigned to a variable in HTML."""
     marker = f"var {variable_name} = "
     marker_index = html_text.find(marker)
@@ -115,7 +115,7 @@ def is_captcha_page(html_text: str) -> bool:
     return any(marker in html_text for marker in checks)
 
 
-def parse_csrf_token(page_html: str) -> Optional[str]:
+def parse_csrf_token(page_html: str) -> str | None:
     """Extract CSRF token from page HTML, if present."""
     match = re.search(
         r'name="__RequestVerificationToken"\s+type="hidden"\s+value="([^"]+)"',
@@ -125,7 +125,7 @@ def parse_csrf_token(page_html: str) -> Optional[str]:
     return match.group(1) if match else None
 
 
-def fetch_html(url: str, timeout_seconds: int = 45, cookie_header: Optional[str] = None) -> str:
+def fetch_html(url: str, timeout_seconds: int = 45, cookie_header: str | None = None) -> str:
     """
     Fetch HTML content from a URL with optional cookie header.
     Uses rate-limited requests via paced_urlopen to avoid overloading servers.
@@ -139,7 +139,7 @@ def fetch_html(url: str, timeout_seconds: int = 45, cookie_header: Optional[str]
         HTML content as string
     """
     # Import here to avoid circular dependency
-    from lib.collector_classes import paced_urlopen
+    from .collector_classes import paced_urlopen
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"

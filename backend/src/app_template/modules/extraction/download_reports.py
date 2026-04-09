@@ -18,21 +18,23 @@ from __future__ import annotations
 import argparse
 import concurrent.futures
 import http.cookiejar
-import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict
-from urllib.request import HTTPCookieProcessor, Request, build_opener
+from typing import Any
 from urllib.parse import urlencode, urlsplit
+from urllib.request import HTTPCookieProcessor, Request, build_opener
 
 from .collector_classes import configure_request_pacer, paced_opener_open
 from .collector_io import read_projects_file, write_jsonl
-from .collector_storage import load_procurement_records_for_pipeline, update_procurement_report_metadata
 from .collector_outcomes import (
-    extract_view_document_json_params,
     extract_view_document_files,
+    extract_view_document_json_params,
     select_final_report_document,
+)
+from .collector_storage import (
+    load_procurement_records_for_pipeline,
+    update_procurement_report_metadata,
 )
 from .document_extractor import extract_documents_from_archive
 from .utils import extract_js_array, is_captcha_page, parse_csrf_token
@@ -59,10 +61,10 @@ def is_eps_publication_page(page_html: str) -> bool:
 
 
 def download_final_report_document(
-    project: Dict[str, Any],
+    project: dict[str, Any],
     output_dir: Path,
     request_timeout_seconds: int = 60,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Download final report document for a project.
 
@@ -269,7 +271,7 @@ def run(args):
     else:
         print(f"Input SQLite: {args.database_path}")
     print(f"Output dir: {args.output_dir}")
-    print(f"Started at: {datetime.now(timezone.utc).isoformat()}")
+    print(f"Started at: {datetime.now(UTC).isoformat()}")
 
     # Load projects
     if getattr(args, "input_file", None):
@@ -322,7 +324,7 @@ def run(args):
 
     max_workers = max(1, int(getattr(args, "workers", DEFAULT_DOWNLOAD_WORKERS)))
 
-    def apply_download_result(project: Dict[str, Any], result: Dict[str, Any], downloaded_at: str) -> None:
+    def apply_download_result(project: dict[str, Any], result: dict[str, Any], downloaded_at: str) -> None:
         nonlocal downloaded_count, failed_count
         project["report_document_path"] = result.get("document_path")
         project["report_document_type"] = result.get("document_type")
@@ -358,13 +360,13 @@ def run(args):
                 downloaded_at=downloaded_at,
             )
 
-    futures: dict[concurrent.futures.Future[Dict[str, Any]], tuple[int, Dict[str, Any], str]] = {}
+    futures: dict[concurrent.futures.Future[dict[str, Any]], tuple[int, dict[str, Any], str]] = {}
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         for idx, project in enumerate(projects, 1):
             procurement_id = project.get("procurement_id", "unknown")
             print(f"[{idx}/{len(projects)}] {procurement_id}...", end=" ")
-            downloaded_at = datetime.now(timezone.utc).isoformat()
+            downloaded_at = datetime.now(UTC).isoformat()
 
             if should_skip_download_for_status(project.get("procurement_status")):
                 project["is_eps_publication"] = "unknown"
@@ -428,7 +430,7 @@ def run(args):
             result = future.result()
             apply_download_result(project, result, downloaded_at)
 
-    print(f"\nFinished at: {datetime.now(timezone.utc).isoformat()}")
+    print(f"\nFinished at: {datetime.now(UTC).isoformat()}")
     print("-" * 60)
     print(f"Downloaded: {downloaded_count}")
     print(f"Already present: {skipped_existing_count}")

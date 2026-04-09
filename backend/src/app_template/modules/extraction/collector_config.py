@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any
 
 ALLOWED_DOMAINS = {
     "building",
@@ -63,7 +63,7 @@ def load_text_file(path: Path, label: str) -> str:
     return text
 
 
-def deep_merge_dict(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+def deep_merge_dict(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
     merged = dict(base)
     for key, value in override.items():
         if isinstance(value, dict) and isinstance(merged.get(key), dict):
@@ -73,7 +73,7 @@ def deep_merge_dict(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str,
     return merged
 
 
-def default_agent_config() -> Dict[str, Any]:
+def default_agent_config() -> dict[str, Any]:
     return {
         "version": 1,
         "classification_agent": {
@@ -193,7 +193,7 @@ def default_agent_config() -> Dict[str, Any]:
     }
 
 
-def validate_agent_config(config: Dict[str, Any]) -> None:
+def validate_agent_config(config: dict[str, Any]) -> None:
     if not isinstance(config, dict):
         raise RuntimeError("Agent config root must be an object.")
     agent = config.get("classification_agent")
@@ -270,11 +270,12 @@ def validate_agent_config(config: Dict[str, Any]) -> None:
     if not isinstance(progress_obj.get("show_in_progress_messages"), bool):
         raise RuntimeError("classification_agent.progress.show_in_progress_messages must be true/false.")
     for key in ("classification_log_every_n", "scan_log_every_n"):
-        if not isinstance(progress_obj.get(key), int) or int(progress_obj.get(key)) < 0:
+        progress_value = progress_obj.get(key)
+        if not isinstance(progress_value, int) or progress_value < 0:
             raise RuntimeError(f"classification_agent.progress.{key} must be integer >= 0.")
 
 
-def load_agent_config(path: Path) -> Tuple[Dict[str, Any], bool]:
+def load_agent_config(path: Path) -> tuple[dict[str, Any], bool]:
     defaults = default_agent_config()
     if not path.is_file():
         return defaults, False
@@ -286,7 +287,7 @@ def load_agent_config(path: Path) -> Tuple[Dict[str, Any], bool]:
     if not isinstance(parsed, dict):
         raise RuntimeError(f"Agent config root must be object: {path}")
 
-    normalized: Dict[str, Any]
+    normalized: dict[str, Any]
 
     # Format A: legacy/global config root with classification_agent object
     if isinstance(parsed.get("classification_agent"), dict):
@@ -325,7 +326,7 @@ def load_agent_config(path: Path) -> Tuple[Dict[str, Any], bool]:
     return merged, True
 
 
-def load_pipeline_config(path: Path) -> Tuple[Dict[str, Any], bool]:
+def load_pipeline_config(path: Path) -> tuple[dict[str, Any], bool]:
     if not path.is_file():
         return {}, False
     raw = path.read_text(encoding="utf-8")

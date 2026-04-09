@@ -4,10 +4,11 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 from urllib.parse import urlparse
 
 from .utils import normalize_text
+
 
 def clean_cell(value: Any) -> Any:
     if not isinstance(value, str):
@@ -20,7 +21,7 @@ def clean_cell(value: Any) -> Any:
     return text
 
 
-def normalize_cpv_code(value: Any) -> Optional[str]:
+def normalize_cpv_code(value: Any) -> str | None:
     if value is None:
         return None
     text = str(clean_cell(value)).strip().strip('"').strip("'")
@@ -31,12 +32,12 @@ def normalize_cpv_code(value: Any) -> Optional[str]:
     return match.group(1)
 
 
-def extract_year_from_resource(resource_name: str) -> Optional[int]:
+def extract_year_from_resource(resource_name: str) -> int | None:
     match = re.search(r"(20\d{2})", resource_name)
     return int(match.group(1)) if match else None
 
 
-def to_float(value: Any) -> Optional[float]:
+def to_float(value: Any) -> float | None:
     if value is None:
         return None
     if isinstance(value, (int, float)):
@@ -51,7 +52,7 @@ def to_float(value: Any) -> Optional[float]:
         return None
 
 
-def canonical_procurement_url(url_value: Any, procurement_id: Any) -> Optional[str]:
+def canonical_procurement_url(url_value: Any, procurement_id: Any) -> str | None:
     url_text = str(clean_cell(url_value or "")).strip()
     if not url_text:
         if procurement_id in (None, ""):
@@ -70,11 +71,11 @@ def canonical_procurement_url(url_value: Any, procurement_id: Any) -> Optional[s
     return url_text
 
 
-def keyword_matches(text: str, keywords: List[str]) -> List[str]:
+def keyword_matches(text: str, keywords: list[str]) -> list[str]:
     return [kw for kw in keywords if kw in text]
 
 
-def classify_project_heuristic(project: Dict[str, Any]) -> Tuple[str, str]:
+def classify_project_heuristic(project: dict[str, Any]) -> tuple[str, str]:
     name_text = normalize_text(
         " ".join(
             [
@@ -181,7 +182,7 @@ def classify_project_heuristic(project: Dict[str, Any]) -> Tuple[str, str]:
     elif is_new and not is_infrastructure:
         label = "new_building"
 
-    reasons: List[str] = []
+    reasons: list[str] = []
     if cpv_code:
         reasons.append(f"cpv={cpv_code}")
     if matched_infra:

@@ -24,7 +24,6 @@ import sqlite3
 from collections import defaultdict
 from itertools import combinations
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
 
 from .collector_companies import (
     FUZZY_MATCH_THRESHOLD,
@@ -69,7 +68,7 @@ def _create_companies_table(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def _is_suspect_group(names: Set[str], threshold: int = SUSPECT_SIMILARITY_THRESHOLD) -> bool:
+def _is_suspect_group(names: set[str], threshold: int = SUSPECT_SIMILARITY_THRESHOLD) -> bool:
     """Return True if the name group looks like an LLM extraction error."""
     if len(names) < SUSPECT_MIN_GROUP_SIZE:
         return False
@@ -84,10 +83,10 @@ def _is_suspect_group(names: Set[str], threshold: int = SUSPECT_SIMILARITY_THRES
 def _upsert_company(
     conn: sqlite3.Connection,
     canonical_name: str,
-    registration_no: Optional[str],
+    registration_no: str | None,
     source: str,
-    match_confidence: Optional[float],
-    aliases: List[str],
+    match_confidence: float | None,
+    aliases: list[str],
     dry_run: bool,
 ) -> int:
     """Insert or update a company row. Returns the row id."""
@@ -163,8 +162,8 @@ def build_index(db_path: Path, threshold: int, dry_run: bool) -> None:
         "FROM procurement_records WHERE procurement_winner IS NOT NULL"
     ).fetchall()
 
-    reg_to_names: Dict[str, Set[str]] = defaultdict(set)
-    no_reg_names: List[str] = []
+    reg_to_names: dict[str, set[str]] = defaultdict(set)
+    no_reg_names: list[str] = []
 
     for row in rows:
         name = row["procurement_winner"].strip()
@@ -184,8 +183,8 @@ def build_index(db_path: Path, threshold: int, dry_run: bool) -> None:
 
     # ── Phase 2: detect suspect reg numbers ───────────────────────────────────
     log.info("Phase 2: detecting suspect reg numbers...")
-    valid_reg_groups: Dict[str, Set[str]] = {}
-    suspect_reg_groups: Dict[str, Set[str]] = {}
+    valid_reg_groups: dict[str, set[str]] = {}
+    suspect_reg_groups: dict[str, set[str]] = {}
 
     for reg, names in reg_to_names.items():
         if _is_suspect_group(names):
@@ -207,7 +206,7 @@ def build_index(db_path: Path, threshold: int, dry_run: bool) -> None:
 
     # ── Phase 3: anchor by registration number ────────────────────────────────
     log.info("Phase 3: anchoring companies by registration number...")
-    reg_to_id: Dict[str, int] = {}
+    reg_to_id: dict[str, int] = {}
 
     for reg, names in valid_reg_groups.items():
         canonical = build_canonical_name(sorted(names))
@@ -218,7 +217,7 @@ def build_index(db_path: Path, threshold: int, dry_run: bool) -> None:
         if dry_run:
             log.info("  [dry] reg_no %s → %r (%d aliases)", reg, canonical, len(names))
 
-    for reg, names in suspect_reg_groups.items():
+    for _reg, names in suspect_reg_groups.items():
         # Each name becomes its own standalone entry (no merging)
         for name in names:
             canonical = build_canonical_name([name])
@@ -238,7 +237,7 @@ def build_index(db_path: Path, threshold: int, dry_run: bool) -> None:
         known_rows = []
 
     # known: list of (id, canonical_name, norm_key, set_of_alias_norms)
-    known: List[Tuple[int, str, str, Set[str]]] = []
+    known: list[tuple[int, str, str, set[str]]] = []
     for r in known_rows:
         aliases = json.loads(r["aliases_json"])
         alias_norms = {normalize_for_matching(a) for a in aliases}
@@ -252,8 +251,8 @@ def build_index(db_path: Path, threshold: int, dry_run: bool) -> None:
     skipped = 0
 
     # Deduplicate no_reg_names while preserving all distinct strings
-    seen_no_reg: Set[str] = set()
-    unique_no_reg: List[str] = []
+    seen_no_reg: set[str] = set()
+    unique_no_reg: list[str] = []
     for n in no_reg_names:
         if n not in seen_no_reg:
             seen_no_reg.add(n)
@@ -272,7 +271,7 @@ def build_index(db_path: Path, threshold: int, dry_run: bool) -> None:
             continue
 
         # Find best match
-        best_id: Optional[int] = None
+        best_id: int | None = None
         best_score: float = 0.0
         best_name: str = ""
         for cid, cname, cnorm, _alias_norms in known:
@@ -307,7 +306,7 @@ def build_index(db_path: Path, threshold: int, dry_run: bool) -> None:
                 conn, build_canonical_name([name]), None, source, confidence, [name], dry_run
             )
             if not dry_run:
-                alias_norms: Set[str] = {norm_key}
+                alias_norms: set[str] = {norm_key}
                 known.append((company_id, name, norm_key, alias_norms))
             inserted += 1
 
@@ -325,8 +324,8 @@ def build_index(db_path: Path, threshold: int, dry_run: bool) -> None:
         company_rows = conn.execute(
             "SELECT id, registration_no, aliases_json FROM companies"
         ).fetchall()
-        reg_to_id_final: Dict[str, int] = {}
-        alias_norm_to_id: Dict[str, int] = {}
+        reg_to_id_final: dict[str, int] = {}
+        alias_norm_to_id: dict[str, int] = {}
         for cr in company_rows:
             if cr["registration_no"]:
                 reg_to_id_final[cr["registration_no"]] = cr["id"]
@@ -341,7 +340,7 @@ def build_index(db_path: Path, threshold: int, dry_run: bool) -> None:
             "FROM procurement_records WHERE procurement_winner IS NOT NULL"
         ).fetchall()
 
-        updates: List[Tuple[int, str]] = []
+        updates: list[tuple[int, str]] = []
         unresolved = 0
         for rec in records:
             reg = normalize_reg_no(rec["procurement_winner_registration_no"])

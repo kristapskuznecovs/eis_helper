@@ -11,16 +11,16 @@ import re
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
-from urllib.request import HTTPCookieProcessor, Request, build_opener
+from typing import Any
 from urllib.parse import urlencode
+from urllib.request import HTTPCookieProcessor, Request, build_opener
 
 from .collector_classes import OutcomeLLMExtractor, paced_opener_open
 from .document_extractor import get_archive_content_as_bytes
 from .utils import extract_js_array, fetch_html, is_captcha_page, normalize_text
 
 
-def parse_optional_float(value: Any) -> Optional[float]:
+def parse_optional_float(value: Any) -> float | None:
     """Parse a value to float, handling None, strings with spaces/commas."""
     if value is None:
         return None
@@ -89,7 +89,7 @@ def is_plausible_company_name(name: str) -> bool:
     return True
 
 
-def normalize_outcome_llm_result(parsed: Dict[str, Any]) -> Dict[str, Any]:
+def normalize_outcome_llm_result(parsed: dict[str, Any]) -> dict[str, Any]:
     """
     Normalize and clean LLM extraction result.
 
@@ -106,8 +106,8 @@ def normalize_outcome_llm_result(parsed: Dict[str, Any]) -> Dict[str, Any]:
         procurement_status = "unknown"
 
     participants_in = parsed.get("participants")
-    participants: List[Dict[str, Any]] = []
-    seen: Set[str] = set()
+    participants: list[dict[str, Any]] = []
+    seen: set[str] = set()
 
     if isinstance(participants_in, list):
         for item in participants_in:
@@ -278,7 +278,7 @@ def extract_text_from_doc_bytes(content: bytes) -> str:
 def extract_text_from_docx_bytes(content: bytes) -> str:
     """Extract text from DOCX file bytes (modern format)."""
     try:
-        import docx
+        import docx  # pyright: ignore[reportMissingImports]
         doc = docx.Document(io.BytesIO(content))
         parts = []
 
@@ -305,7 +305,7 @@ def extract_text_from_docx_bytes(content: bytes) -> str:
 def extract_text_from_pdf_bytes(content: bytes) -> str:
     """Extract text from PDF file bytes using pdfplumber."""
     try:
-        import pdfplumber
+        import pdfplumber  # pyright: ignore[reportMissingImports]
         with pdfplumber.open(io.BytesIO(content)) as pdf:
             parts = []
             for page in pdf.pages:
@@ -332,9 +332,10 @@ def extract_text_from_pdf_bytes_ocr(content: bytes, max_pages: int = 25) -> str:
         try:
             doc = fitz.open(tmp_pdf_path)
             parts = []
-            for page_num, page in enumerate(doc):
+            for page_num in range(len(doc)):
                 if page_num >= max_pages:
                     break
+                page = doc.load_page(page_num)
                 pix = page.get_pixmap(dpi=200)
                 img_bytes = pix.tobytes("png")
 
@@ -368,7 +369,7 @@ def extract_text_from_pdf_bytes_ocr(content: bytes, max_pages: int = 25) -> str:
         return ""
 
 
-def convert_pdf_to_images_base64(content: bytes, max_pages: int = 10, dpi: int = 200) -> List[str]:
+def convert_pdf_to_images_base64(content: bytes, max_pages: int = 10, dpi: int = 200) -> list[str]:
     """
     Convert PDF pages to base64-encoded PNG images for Vision API.
 
@@ -382,14 +383,16 @@ def convert_pdf_to_images_base64(content: bytes, max_pages: int = 10, dpi: int =
     """
     try:
         import base64
+
         import fitz  # PyMuPDF
 
         images_b64 = []
         doc = fitz.open(stream=content, filetype="pdf")
 
-        for page_num, page in enumerate(doc):
+        for page_num in range(len(doc)):
             if page_num >= max_pages:
                 break
+            page = doc.load_page(page_num)
 
             pix = page.get_pixmap(dpi=dpi)
             img_bytes = pix.tobytes("png")
@@ -454,7 +457,7 @@ def extract_text_from_report_bytes(filename: str, content: bytes) -> str:
     return ""
 
 
-def select_final_report_document(actual_docs: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+def select_final_report_document(actual_docs: list[dict[str, Any]]) -> dict[str, Any] | None:
     """
     Select the best outcome document from a list of documents.
 
@@ -500,7 +503,7 @@ def select_final_report_document(actual_docs: List[Dict[str, Any]]) -> Optional[
     return None
 
 
-def extract_view_document_json_params(view_html: str) -> Dict[str, Any]:
+def extract_view_document_json_params(view_html: str) -> dict[str, Any]:
     """Extract JSON parameters from ViewDocument page."""
     match = re.search(r'id="ViewDocumentModel_JsonParams"[^>]*value="([^"]*)"', view_html)
     if match:
@@ -519,7 +522,7 @@ def extract_view_document_json_params(view_html: str) -> Dict[str, Any]:
     return {}
 
 
-def extract_view_document_files(view_html: str) -> List[Dict[str, Any]]:
+def extract_view_document_files(view_html: str) -> list[dict[str, Any]]:
     """Extract file list from ViewDocument page."""
     match = re.search(r'var\s+ViewDocumentModel_Files_items\s*=\s*(\[.*?\]);', view_html, flags=re.DOTALL)
     if match:
@@ -531,11 +534,11 @@ def extract_view_document_files(view_html: str) -> List[Dict[str, Any]]:
 
 
 def extract_final_report_outcome(
-    project: Dict[str, Any],
+    project: dict[str, Any],
     request_timeout_seconds: int,
-    cookie_header: Optional[str],
-    outcome_llm_extractor: Optional[OutcomeLLMExtractor],
-) -> Dict[str, Any]:
+    cookie_header: str | None,
+    outcome_llm_extractor: OutcomeLLMExtractor | None,
+) -> dict[str, Any]:
     """
     Extract procurement outcome from final report using LLM only.
 
@@ -559,7 +562,7 @@ def extract_final_report_outcome(
     procurement_url = project.get("procurement_url", "")
     procurement_id = project.get("procurement_id", "unknown")
 
-    base_result: Dict[str, Any] = {
+    base_result: dict[str, Any] = {
         "procurement_winner": None,
         "procurement_winner_registration_no": None,
         "procurement_winner_suggested_price_eur": None,
@@ -640,7 +643,7 @@ def extract_final_report_outcome(
 
     used_vision = False
     try:
-        llm_parsed: Optional[Dict[str, Any]] = None
+        llm_parsed: dict[str, Any] | None = None
         text_is_insufficient = not report_text or len(report_text.strip()) < 100
         ext = Path(file_name).suffix.lower()
 
@@ -724,4 +727,3 @@ def extract_final_report_outcome(
             pass
 
     return base_result
-

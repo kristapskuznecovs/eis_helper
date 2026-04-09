@@ -7,8 +7,8 @@ import concurrent.futures
 import re
 import threading
 import time
-from typing import Any, Dict, Iterable, List, Optional, Tuple
-from urllib.request import Request
+from collections.abc import Iterable
+from typing import Any
 
 from .collector_classes import (
     CLASSIFICATION_FINAL_CATEGORIES,
@@ -17,26 +17,29 @@ from .collector_classes import (
     OutcomeLLMExtractor,
 )
 from .collector_heuristics import (
-    clean_cell,
-    normalize_cpv_code,
-    extract_year_from_resource,
-    to_float,
     canonical_procurement_url,
+    clean_cell,
+    extract_year_from_resource,
+    normalize_cpv_code,
+    to_float,
+)
+from .collector_outcomes import (
+    extract_final_report_outcome,
+    is_finished_procurement_status,
 )
 from .utils import extract_js_array, fetch_html, is_captcha_page, normalize_text
-from .collector_outcomes import extract_final_report_outcome, is_finished_procurement_status
 
 CPV_FIELD = "CPV_kods_galvenais_prieksmets"
 def classify_procurement_records(
-    procurement_records: List[Dict[str, Any]],
+    procurement_records: list[dict[str, Any]],
     classification_mode: str,
     classification_workers: int,
-    openai_classifier: Optional[OpenAIClassifier],
-    openai_max_projects: Optional[int],
+    openai_classifier: OpenAIClassifier | None,
+    openai_max_projects: int | None,
     show_in_progress_messages: bool,
     log_every_n: int,
-    on_project_classified: Optional[Any] = None,
-) -> Dict[str, int]:
+    on_project_classified: Any | None = None,
+) -> dict[str, int]:
     if classification_mode != "openai":
         raise RuntimeError("Only 'openai' classification mode is supported.")
     if openai_classifier is None:
@@ -90,8 +93,8 @@ def classify_procurement_records(
     return classification_counts(procurement_records)
 
 
-def classification_counts(rows: List[Dict[str, Any]]) -> Dict[str, int]:
-    counts = {label: 0 for label in sorted(CLASSIFICATION_FINAL_CATEGORIES)}
+def classification_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
+    counts = dict.fromkeys(sorted(CLASSIFICATION_FINAL_CATEGORIES), 0)
     for row in rows:
         label = str(row.get("classification_final_category") or "unknown").strip().lower()
         if label not in counts:
@@ -105,7 +108,7 @@ def iter_resource_records(
     resource_id: str,
     batch_size: int,
     sleep_seconds: float = 0.0,
-) -> Iterable[Dict[str, Any]]:
+) -> Iterable[dict[str, Any]]:
     offset = 0
     while True:
         response = client.datastore_search(
@@ -130,12 +133,12 @@ def collect_procurement_records(
     client: CKANClient,
     package_id: str,
     from_year: int,
-    to_year: Optional[int],
-    cpv_prefixes: List[str],
+    to_year: int | None,
+    cpv_prefixes: list[str],
     batch_size: int,
-    min_estimated_value: Optional[float],
-    max_projects: Optional[int],
-) -> Tuple[List[Dict[str, Any]], Dict[str, int], Dict[str, int], int]:
+    min_estimated_value: float | None,
+    max_projects: int | None,
+) -> tuple[list[dict[str, Any]], dict[str, int], dict[str, int], int]:
     package = client.package_show(package_id)["result"]
     resources = []
     for resource in package.get("resources") or []:
@@ -149,9 +152,9 @@ def collect_procurement_records(
         resources.append((year, resource))
     resources.sort(key=lambda item: item[0])
 
-    procurement_records_by_key: Dict[str, Dict[str, Any]] = {}
-    counts_by_year: Dict[str, int] = {}
-    prefilter_counts_by_year: Dict[str, int] = {}
+    procurement_records_by_key: dict[str, dict[str, Any]] = {}
+    counts_by_year: dict[str, int] = {}
+    prefilter_counts_by_year: dict[str, int] = {}
 
     for year, resource in resources:
         resource_id = str(resource["id"])
@@ -229,7 +232,7 @@ def collect_procurement_records(
 
             lot_currency = str(clean_cell(record.get("Dalas_ligumcenas_valuta") or "")).upper()
             if lot_currency in ("", "EUR"):
-                lot_value: Optional[float] = None
+                lot_value: float | None = None
                 for field_name in (
                     "Dalas_planota_ligumcena",
                     "Dalas_planota_ligumcena_lidz",
@@ -245,7 +248,7 @@ def collect_procurement_records(
                     previous = item["lot_values"].get(lot_key_str)
                     item["lot_values"][lot_key_str] = lot_value if previous is None else max(previous, lot_value)
 
-    procurement_records: List[Dict[str, Any]] = []
+    procurement_records: list[dict[str, Any]] = []
     for item in procurement_records_by_key.values():
         base = item["base"]
         project_values = item["project_values"]
@@ -293,15 +296,15 @@ def collect_procurement_records(
 
 
 def scan_project_for_docs(
-    project: Dict[str, Any],
-    compiled_title_patterns: List[re.Pattern[str]],
+    project: dict[str, Any],
+    compiled_title_patterns: list[re.Pattern[str]],
     include_historical: bool,
     request_timeout_seconds: int,
-    cookie_header: Optional[str],
+    cookie_header: str | None,
     extract_final_report_outcomes: bool,
     outcome_extraction_mode: str,
-    outcome_llm_extractor: Optional[OutcomeLLMExtractor],
-) -> Dict[str, Any]:
+    outcome_llm_extractor: OutcomeLLMExtractor | None,
+) -> dict[str, Any]:
     url = str(project.get("procurement_url") or "")
     html_text = fetch_html(
         url=url,
@@ -314,7 +317,7 @@ def scan_project_for_docs(
     actual_docs = extract_js_array(html_text, "ActualDocuments_items")
     historical_docs = extract_js_array(html_text, "HistoricalDocuments_items") if include_historical else []
 
-    matched_titles: List[str] = []
+    matched_titles: list[str] = []
     for section, docs in (("actual", actual_docs), ("historical", historical_docs)):
         for doc in docs:
             title = str(doc.get("Title") or "").strip()
@@ -331,11 +334,8 @@ def scan_project_for_docs(
         result.update(
             extract_final_report_outcome(
                 project=project,
-                actual_docs=actual_docs,
                 request_timeout_seconds=request_timeout_seconds,
                 cookie_header=cookie_header,
-                procurement_page_html=html_text,
-                outcome_extraction_mode=outcome_extraction_mode,
                 outcome_llm_extractor=outcome_llm_extractor,
             )
         )

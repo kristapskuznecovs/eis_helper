@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from typing import List, Optional, Tuple
 
 from .collector_outcomes import (
     is_plausible_company_name,
@@ -40,7 +39,7 @@ def _accent_fold(text: str) -> str:
     )
 
 
-def normalize_reg_no(raw: Optional[str]) -> Optional[str]:
+def normalize_reg_no(raw: str | None) -> str | None:
     """Return a clean 11-digit Latvian registration number, or None."""
     if not raw:
         return None
@@ -87,7 +86,7 @@ def normalize_for_matching(name: str) -> str:
     return text
 
 
-def build_canonical_name(names: List[str]) -> str:
+def build_canonical_name(names: list[str]) -> str:
     """Pick the best display name from a list of aliases.
 
     Prefers the shortest name that passes is_plausible_company_name
@@ -97,7 +96,7 @@ def build_canonical_name(names: List[str]) -> str:
     if not names:
         return ""
 
-    def score(n: str) -> Tuple[int, int, int]:
+    def score(n: str) -> tuple[int, int, int]:
         noise = n.count('"') + n.count("(") + n.count(")") + n.count("\u201e") + n.count("\u201c")
         return (0 if is_plausible_company_name(n) else 1, noise, len(n))
 
@@ -118,7 +117,7 @@ def fuzzy_score(a: str, b: str) -> float:
         return ratio * 100
 
 
-def normalize_party_name(value: Optional[str]) -> str:
+def normalize_party_name(value: str | None) -> str:
     """Normalize a company name for grouping and display.
 
     Strips legal form indicators, quotes, and accent-folds for consistent

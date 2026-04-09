@@ -11,8 +11,8 @@ from sqlalchemy import and_, or_, text
 from sqlalchemy.orm import Session
 
 from app_template.modules.chat.models import Procurement
-from app_template.shared.i18n import _, get_locale
 from app_template.settings import get_settings
+from app_template.shared.i18n import _, get_locale
 
 # Map English category names to CPV code prefixes
 CATEGORY_CPV_MAP: dict[str, list[str]] = {

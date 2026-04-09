@@ -1,10 +1,10 @@
 """Multi-lot procurement detection and handling."""
 
-from typing import Dict, Any, List, Tuple
 import re
+from typing import Any
 
 
-def detect_multi_lot_from_text(text: str) -> Tuple[bool, int]:
+def detect_multi_lot_from_text(text: str) -> tuple[bool, int]:
     """
     Detect if document is multi-lot procurement by analyzing text.
 
@@ -51,7 +51,7 @@ def detect_multi_lot_from_text(text: str) -> Tuple[bool, int]:
     return False, 1
 
 
-def extract_lots_structure(text: str, lot_count: int) -> List[Dict[str, Any]]:
+def extract_lots_structure(text: str, lot_count: int) -> list[dict[str, Any]]:
     """
     Extract basic structure of lots from text.
 
@@ -97,9 +97,9 @@ def extract_lots_structure(text: str, lot_count: int) -> List[Dict[str, Any]]:
 
 
 def enhance_participants_with_lot_info(
-    participants: List[Dict[str, Any]],
-    lots_structure: List[Dict[str, Any]]
-) -> List[Dict[str, Any]]:
+    participants: list[dict[str, Any]],
+    lots_structure: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     """
     Enhance participant list with lot information.
 

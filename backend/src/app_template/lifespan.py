@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import FastAPI
 
@@ -14,7 +14,7 @@ async def _nightly_sync_loop() -> None:
     from app_template.shared.db.session import SessionLocal
 
     while True:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         # Next 03:00 UTC
         next_run = now.replace(hour=3, minute=0, second=0, microsecond=0)
         if next_run <= now:

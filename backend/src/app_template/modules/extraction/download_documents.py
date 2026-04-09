@@ -17,14 +17,19 @@ import re
 import urllib.parse
 import urllib.request
 import zipfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from .collector_classes import configure_request_pacer
 from .collector_io import read_projects_file
-from .utils import extract_js_array, is_captcha_page, load_dotenv_file, parse_csrf_token, slugify
-
+from .utils import (
+    extract_js_array,
+    is_captcha_page,
+    load_dotenv_file,
+    parse_csrf_token,
+    slugify,
+)
 
 # Constants
 DEFAULT_INPUT_FILE = "data/eis_building_docs_projects_2020_plus/projects_with_building_docs.jsonl"
@@ -37,7 +42,7 @@ EIS_APP_BASE_URL = f"{EIS_BASE_URL}/EKEIS"
 
 def utc_now_iso() -> str:
     """Return current UTC time in ISO 8601 format."""
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def download_procurement_files(
@@ -46,7 +51,7 @@ def download_procurement_files(
     include_historical: bool = False,
     keep_zips: bool = False,
     timeout: int = DEFAULT_REQUEST_TIMEOUT,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Download all files for a procurement.
 
@@ -98,7 +103,7 @@ def download_procurement_files(
             re.DOTALL,
         )
         if sections_match:
-            sections = extract_js_array(sections_match.group(1))
+            sections = extract_js_array(html_text, "documentSections")
 
     # Default to "Actual" section
     if not sections:

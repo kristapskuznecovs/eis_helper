@@ -22,11 +22,11 @@ import json
 import time
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 from typing import Any
 
 import psycopg
+from psycopg import sql as psy_sql
 
 CKAN_BASE = "https://data.gov.lv/dati/api/3/action"
 PAGE_SIZE = 10_000
@@ -535,7 +535,10 @@ def sync_dataset(
         if cfg.get("truncate_before_sync") and mapped:
             with conn.cursor() as cur:
                 cur.execute(
-                    f"DELETE FROM {cfg['table']} WHERE source_year = %s", (year,)
+                    psy_sql.SQL("DELETE FROM {} WHERE source_year = %s").format(
+                        psy_sql.Identifier(str(cfg["table"]))
+                    ),
+                    (year,),
                 )
             print(f"  [{dataset}] cleared existing rows for year={year}")
 
@@ -555,7 +558,6 @@ def sync_dataset(
 def run(args: argparse.Namespace) -> int:
     database_url = args.database_url
     if not database_url:
-        import os
         from pathlib import Path
         env_path = Path.cwd() / ".env"
         if env_path.exists():
@@ -578,13 +580,13 @@ def run(args: argparse.Namespace) -> int:
         print(f"ERROR: Unknown datasets: {unknown}. Valid: {list(DATASET_CONFIGS.keys())}")
         return 1
 
-    print(f"Connecting to database...")
+    print("Connecting to database...")
     print(f"Datasets: {datasets}")
     print(f"Years: {args.from_year}–{args.to_year}")
     if args.dry_run:
         print("DRY RUN mode — no writes")
 
-    started = datetime.now(timezone.utc)
+    started = datetime.now(UTC)
     summary: dict[str, Any] = {}
 
     with psycopg.connect(dsn) as conn:
@@ -593,7 +595,7 @@ def run(args: argparse.Namespace) -> int:
             stats = sync_dataset(conn, dataset, args.from_year, args.to_year, dry_run=args.dry_run)
             summary[dataset] = stats
 
-    elapsed = (datetime.now(timezone.utc) - started).total_seconds()
+    elapsed = (datetime.now(UTC) - started).total_seconds()
     print(f"\nDone in {elapsed:.1f}s")
     print(json.dumps(summary, indent=2))
     return 0

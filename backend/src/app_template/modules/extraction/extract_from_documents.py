@@ -4,9 +4,9 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .collector_classes import OutcomeLLMExtractor
 from .collector_io import read_projects_file, write_jsonl
@@ -16,15 +16,14 @@ from .collector_outcomes import (
     normalize_outcome_llm_result,
 )
 from .collector_storage import update_extraction_results
-from .collector_multi_lot import detect_multi_lot_from_text, enhance_participants_with_lot_info, extract_lots_structure
 from .utils import load_dotenv_file
 
 
 def extract_from_local_document_llm(
-    project: Dict[str, Any],
+    project: dict[str, Any],
     document_path: str,
     llm_extractor: OutcomeLLMExtractor,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Extract outcome data from a local document file using LLM only.
 
@@ -70,7 +69,7 @@ def extract_from_local_document_llm(
             multi_lot_detection = llm_extractor.detect_multi_lot(report_text)
             is_multi_lot_detected = multi_lot_detection.get("is_multi_lot", False)
             lot_count_detected = multi_lot_detection.get("lot_count") or 1
-        except Exception as multi_lot_err:
+        except Exception:
             # If multi-lot detection fails, continue with single-lot assumption
             is_multi_lot_detected = False
             lot_count_detected = 1
@@ -78,7 +77,7 @@ def extract_from_local_document_llm(
     # STEP 2: Extract data with guidance from multi-lot detection
     used_vision = False
     try:
-        llm_parsed: Optional[Dict[str, Any]] = None
+        llm_parsed: dict[str, Any] | None = None
         text_is_insufficient = not report_text or len(report_text.strip()) < 100
 
         if file_path.suffix.lower() == ".pdf" and text_is_insufficient:
@@ -226,7 +225,7 @@ def run(args):
     print(f"LLM Model: {args.llm_model}")
     if args.database:
         print(f"Database: {args.database} (direct SQLite write enabled)")
-    print(f"Started at: {datetime.now(timezone.utc).isoformat()}")
+    print(f"Started at: {datetime.now(UTC).isoformat()}")
 
     load_dotenv_file(Path(".env"))
 
@@ -308,7 +307,7 @@ def run(args):
             # Also update database incrementally
             if args.database:
                 db_path = Path(args.database)
-                extracted_at = datetime.now(timezone.utc).isoformat()
+                extracted_at = datetime.now(UTC).isoformat()
                 rows_updated = update_extraction_results(db_path, projects, extracted_at=extracted_at)
                 print(f"  💾 Updated {rows_updated} records in database")
 
@@ -318,12 +317,12 @@ def run(args):
     # Final database update if specified
     if args.database:
         db_path = Path(args.database)
-        extracted_at = datetime.now(timezone.utc).isoformat()
+        extracted_at = datetime.now(UTC).isoformat()
         print(f"\n📊 Final database write: {db_path}")
         rows_updated = update_extraction_results(db_path, projects, extracted_at=extracted_at)
         print(f"✅ Updated {rows_updated} records in database")
 
-    print(f"\nFinished at: {datetime.now(timezone.utc).isoformat()}")
+    print(f"\nFinished at: {datetime.now(UTC).isoformat()}")
     print("-" * 60)
     print(f"Extracted: {extracted_count}")
     print(f"Failed: {failed_count}")

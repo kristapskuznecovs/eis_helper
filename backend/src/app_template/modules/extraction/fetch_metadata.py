@@ -9,9 +9,9 @@ import json
 import os
 import re
 import threading
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from .collector_classes import CKANClient, OpenAIClassifier, configure_request_pacer
 from .collector_config import (
@@ -27,9 +27,9 @@ from .collector_pipeline import (
     scan_project_for_docs,
 )
 from .collector_storage import (
-    procurement_record_storage_key,
     initialize_procurement_records,
     load_procurement_records_by_keys,
+    procurement_record_storage_key,
     upsert_procurement_records,
 )
 from .utils import load_dotenv_file
@@ -58,12 +58,12 @@ CLASSIFICATION_PERSIST_BATCH_SIZE = 10
 
 
 def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _build_openai_classifier(
     args: argparse.Namespace,
-    agent_config: Dict[str, Any],
+    agent_config: dict[str, Any],
     effective_classification_mode: str,
 ) -> OpenAIClassifier | None:
     if effective_classification_mode != "openai":
@@ -94,6 +94,7 @@ def _build_openai_classifier(
     history_path_value = history_cfg.get("path") if isinstance(history_cfg, dict) else None
     history_path = resolve_script_relative_path(str(history_path_value)) if history_path_value else None
     scale_thresholds = agent_config.get("scale_thresholds") if isinstance(agent_config, dict) else None
+    history_max_entries_value = history_cfg.get("max_entries") if isinstance(history_cfg, dict) else None
 
     return OpenAIClassifier(
         model=str(agent.get("model") or args.openai_model),
@@ -116,9 +117,7 @@ def _build_openai_classifier(
         history_store_raw_responses=bool(history_cfg.get("store_raw_responses", True))
         if isinstance(history_cfg, dict)
         else True,
-        history_max_entries=int(history_cfg.get("max_entries"))
-        if isinstance(history_cfg, dict) and isinstance(history_cfg.get("max_entries"), int)
-        else None,
+        history_max_entries=history_max_entries_value if isinstance(history_max_entries_value, int) else None,
         scale_thresholds=scale_thresholds if isinstance(scale_thresholds, dict) else None,
     )
 
@@ -132,8 +131,8 @@ def run(args: argparse.Namespace) -> int:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    agent_config: Dict[str, Any] = {}
-    pipeline_config: Dict[str, Any] = {}
+    agent_config: dict[str, Any] = {}
+    pipeline_config: dict[str, Any] = {}
     effective_classification_mode = args.classification_mode
     effective_classification_workers = max(1, int(args.classification_workers))
     effective_show_in_progress_messages = True
@@ -214,7 +213,7 @@ def run(args: argparse.Namespace) -> int:
     if openai_classifier is None:
         raise RuntimeError(f"{args.openai_api_key_env} not set. OpenAI classification is required.")
 
-    persist_buffer: List[Dict[str, Any]] = []
+    persist_buffer: list[dict[str, Any]] = []
     persist_lock = threading.Lock()
     classification_rows_persisted = 0
 
@@ -241,7 +240,7 @@ def run(args: argparse.Namespace) -> int:
             f"{classification_rows_persisted}/{len(procurement_records)} procurement records in SQLite: {database_path}"
         )
 
-    def on_project_classified(project: Dict[str, Any], processed: int, total: int) -> None:
+    def on_project_classified(project: dict[str, Any], processed: int, total: int) -> None:
         del total
         with persist_lock:
             persist_buffer.append(dict(project))
@@ -266,13 +265,13 @@ def run(args: argparse.Namespace) -> int:
     print(f"Classification results: {json.dumps(class_counts, ensure_ascii=False)}")
 
     print("Scanning procurement pages for design documentation titles...")
-    matched: List[Dict[str, Any]] = []
-    failed: List[Dict[str, Any]] = []
+    matched: list[dict[str, Any]] = []
+    failed: list[dict[str, Any]] = []
     captcha_failures = 0
     scanned_count = 0
     lock = threading.Lock()
 
-    def worker(procurement_record: Dict[str, Any]) -> None:
+    def worker(procurement_record: dict[str, Any]) -> None:
         nonlocal scanned_count, captcha_failures
         try:
             result = scan_project_for_docs(
@@ -327,7 +326,7 @@ def run(args: argparse.Namespace) -> int:
     matched_count = write_jsonl(matched_path, matched)
     failed_count = write_jsonl(failed_path, failed)
 
-    matched_counts_by_year: Dict[str, int] = {}
+    matched_counts_by_year: dict[str, int] = {}
     for row in matched:
         key = str(row.get("year") or "unknown")
         matched_counts_by_year[key] = matched_counts_by_year.get(key, 0) + 1

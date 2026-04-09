@@ -34,3 +34,6 @@ data/exports/*
 !data/uploads/.gitkeep
 !data/processed/.gitkeep
 !data/exports/.gitkeep
+database/*.sqlite
+database/*.db
+tmp/

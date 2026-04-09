@@ -1,7 +1,7 @@
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
-import sqlite3
 
 from lib.collector_classes import derive_final_category, normalize_classification_result
 from lib.collector_storage import (

@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any
 
-def write_jsonl(path: Path, rows: Iterable[Dict[str, Any]]) -> int:
+
+def write_jsonl(path: Path, rows: Iterable[dict[str, Any]]) -> int:
     count = 0
     with path.open("w", encoding="utf-8") as fh:
         for row in rows:
@@ -16,15 +18,15 @@ def write_jsonl(path: Path, rows: Iterable[Dict[str, Any]]) -> int:
     return count
 
 
-def write_json(path: Path, rows: List[Dict[str, Any]]) -> int:
+def write_json(path: Path, rows: list[dict[str, Any]]) -> int:
     path.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
     return len(rows)
 
 
-def read_projects_file(path: Path) -> List[Dict[str, Any]]:
+def read_projects_file(path: Path) -> list[dict[str, Any]]:
     suffix = path.suffix.lower()
     if suffix == ".jsonl":
-        rows: List[Dict[str, Any]] = []
+        rows: list[dict[str, Any]] = []
         for raw_line in path.read_text(encoding="utf-8").splitlines():
             line = raw_line.strip()
             if not line:

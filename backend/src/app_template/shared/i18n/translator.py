@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from contextvars import ContextVar
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +15,7 @@ def _locale_path(locale: str) -> Path:
     return Path(__file__).resolve().parents[4] / "locales" / locale / "messages.json"
 
 
-@lru_cache(maxsize=None)
+@cache
 def _load(locale: str) -> dict[str, Any]:
     path = _locale_path(locale)
     fallback = _locale_path(DEFAULT_LOCALE.value)

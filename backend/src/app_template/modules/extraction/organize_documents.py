@@ -6,9 +6,9 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from .collector_classes import configure_request_pacer
 from .collector_io import read_projects_file
@@ -23,7 +23,7 @@ DEFAULT_ENV_FILE = ".env"
 
 
 def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def organize_project(
@@ -31,7 +31,7 @@ def organize_project(
     raw_dir: Path,
     output_dir: Path,
     classification_mode: str = "hybrid",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     project_dir = output_dir / str(procurement_id)
     project_dir.mkdir(parents=True, exist_ok=True)
 

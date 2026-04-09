@@ -9,14 +9,15 @@ from app_template.shared.storage import service as storage_service
 
 def create_document(db: Session, file: UploadFile) -> Document:
     content = file.file.read()
-    relative_path = str(Path("documents") / file.filename)
+    filename = file.filename or "upload.bin"
+    relative_path = str(Path("documents") / filename)
     stored_file = storage_service.upload(
         key=relative_path,
         data=content,
         content_type=file.content_type or "application/octet-stream",
     )
 
-    document = Document(filename=file.filename, storage_path=stored_file.key, status="uploaded")
+    document = Document(filename=filename, storage_path=stored_file.key, status="uploaded")
     db.add(document)
     db.commit()
     db.refresh(document)

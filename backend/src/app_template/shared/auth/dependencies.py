@@ -5,8 +5,8 @@ from structlog.contextvars import bind_contextvars
 
 from app_template.deps import get_db
 from app_template.modules.users.models import User
-from app_template.shared.errors.exceptions import AppError
 from app_template.shared.auth.jwt import decode_access_token
+from app_template.shared.errors.exceptions import AppError
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 

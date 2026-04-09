@@ -29,10 +29,8 @@ import time
 import unicodedata
 import urllib.request
 from collections import defaultdict
-from dataclasses import dataclass, field
-from itertools import combinations
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
 
 from .collector_companies import fuzzy_score, normalize_for_matching
 
@@ -110,12 +108,12 @@ def fetch_ur_company(reg: str) -> CompanyInfo:
 
 # ── Beneficial owners CSV ─────────────────────────────────────────────────────
 
-def download_ubo_map() -> Dict[str, List[str]]:
+def download_ubo_map() -> dict[str, list[str]]:
     """Download beneficial_owners.csv and return {reg -> [full_name, ...]}."""
     log.info("Downloading beneficial_owners.csv from data.gov.lv...")
     req = urllib.request.Request(UR_UBO_URL, headers={"User-Agent": "Mozilla/5.0"})
     raw = urllib.request.urlopen(req, timeout=60).read().decode("utf-8", errors="replace")
-    ubo_map: Dict[str, List[str]] = defaultdict(list)
+    ubo_map: dict[str, list[str]] = defaultdict(list)
     reader = csv.DictReader(io.StringIO(raw), delimiter=";")
     for row in reader:
         reg = str(row.get("legal_entity_registration_number", "")).strip()
@@ -143,8 +141,8 @@ def _ensure_cache(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def _load_cache(conn: sqlite3.Connection) -> Dict[str, CompanyInfo]:
-    cache: Dict[str, CompanyInfo] = {}
+def _load_cache(conn: sqlite3.Connection) -> dict[str, CompanyInfo]:
+    cache: dict[str, CompanyInfo] = {}
     try:
         for row in conn.execute("SELECT * FROM ur_cache"):
             info = CompanyInfo(
@@ -171,7 +169,7 @@ def _save_cache(conn: sqlite3.Connection, info: CompanyInfo) -> None:
 
 def find_candidate_pairs(
     conn: sqlite3.Connection, min_wins: int
-) -> List[Tuple[float, int, int, str, str, str, str, int, int]]:
+) -> list[tuple[float, int, int, str, str, str, str, int, int]]:
     rows = conn.execute("""
         SELECT c.id, c.canonical_name, c.registration_no,
                COUNT(r.procurement_record_key) as wins
@@ -211,9 +209,9 @@ def find_candidate_pairs(
 
 def group_source(
     reg_a: str, reg_b: str,
-    cache: Dict[str, CompanyInfo],
-    ubo_map: Dict[str, List[str]],
-) -> Optional[Tuple[str, str]]:
+    cache: dict[str, CompanyInfo],
+    ubo_map: dict[str, list[str]],
+) -> tuple[str, str] | None:
     """Return (source, evidence_note) or None if no grouping signal."""
     info_a = cache.get(reg_a)
     info_b = cache.get(reg_b)
@@ -244,8 +242,8 @@ def group_source(
 
 class UnionFind:
     def __init__(self) -> None:
-        self.parent: Dict[int, int] = {}
-        self.edge_source: Dict[Tuple[int, int], Tuple[str, str]] = {}
+        self.parent: dict[int, int] = {}
+        self.edge_source: dict[tuple[int, int], tuple[str, str]] = {}
 
     def find(self, x: int) -> int:
         self.parent.setdefault(x, x)
@@ -264,14 +262,14 @@ class UnionFind:
         if not existing or priority.get(source, 0) > priority.get(existing[0], 0):
             self.edge_source[key] = (source, note)
 
-    def groups(self) -> Dict[int, List[int]]:
-        result: Dict[int, List[int]] = {}
+    def groups(self) -> dict[int, list[int]]:
+        result: dict[int, list[int]] = {}
         for x in self.parent:
             root = self.find(x)
             result.setdefault(root, []).append(x)
         return {k: sorted(v) for k, v in result.items() if len(v) > 1}
 
-    def best_source_for_group(self, member_ids: List[int]) -> Tuple[str, str]:
+    def best_source_for_group(self, member_ids: list[int]) -> tuple[str, str]:
         """Return the strongest (source, note) among all edges in this group."""
         priority = {"same_address": 3, "same_owner": 2, "suspected": 1}
         best = ("suspected", "")
@@ -299,8 +297,8 @@ def run(db_path: Path, min_wins: int, dry_run: bool) -> None:
     pairs = find_candidate_pairs(conn, min_wins)
 
     # Unique reg numbers needed
-    needed: Set[str] = set()
-    for _, id_a, id_b, name_a, reg_a, name_b, reg_b, wins_a, wins_b in pairs:
+    needed: set[str] = set()
+    for _, _id_a, _id_b, _name_a, reg_a, _name_b, reg_b, _wins_a, _wins_b in pairs:
         needed.add(reg_a)
         needed.add(reg_b)
 
@@ -365,7 +363,7 @@ def run(db_path: Path, min_wins: int, dry_run: bool) -> None:
 
     # Build groups using union-find
     uf = UnionFind()
-    for score, id_a, id_b, name_a, reg_a, name_b, reg_b, wins_a, wins_b in pairs:
+    for _score, id_a, id_b, _name_a, reg_a, _name_b, reg_b, _wins_a, _wins_b in pairs:
         result = group_source(reg_a, reg_b, cache, ubo_map)
         if result:
             source, note = result
@@ -375,12 +373,11 @@ def run(db_path: Path, min_wins: int, dry_run: bool) -> None:
     log.info("\nFound %d groups from %d pairs", len(groups), len(pairs))
 
     # Existing confirmed groups (same_owner from prior runs) — don't overwrite
-    confirmed_group_ids: Set[int] = set(
-        row["id"] for row in conn.execute(
-            "SELECT id FROM company_groups WHERE source = 'same_owner'"
-        )
-    )
-    existing_company_groups: Dict[int, int] = {
+    confirmed_group_ids: set[int] = {
+        row["id"]
+        for row in conn.execute("SELECT id FROM company_groups WHERE source = 'same_owner'")
+    }
+    existing_company_groups: dict[int, int] = {
         row["id"]: row["group_id"]
         for row in conn.execute(
             "SELECT id, group_id FROM companies WHERE group_id IS NOT NULL"
@@ -388,7 +385,7 @@ def run(db_path: Path, min_wins: int, dry_run: bool) -> None:
     }
 
     created = 0
-    for root, member_ids in sorted(groups.items(), key=lambda x: -len(x[1])):
+    for _root, member_ids in sorted(groups.items(), key=lambda x: -len(x[1])):
         member_rows = [
             conn.execute(
                 "SELECT canonical_name, registration_no FROM companies WHERE id = ?", (mid,)
@@ -409,7 +406,7 @@ def run(db_path: Path, min_wins: int, dry_run: bool) -> None:
 
         # Build notes
         details = []
-        for reg, name in zip(regs, names):
+        for reg, name in zip(regs, names, strict=False):
             info = cache.get(reg)
             addr = info.address if info else "?"
             ubos = ", ".join(ubo_map.get(reg, [])) or "—"
@@ -419,7 +416,7 @@ def run(db_path: Path, min_wins: int, dry_run: bool) -> None:
         log.info(
             "  [%s] %r — %d members: %s",
             best_source, group_name, len(member_ids),
-            ", ".join(f"{n} ({r})" for n, r in zip(names, regs)),
+            ", ".join(f"{n} ({r})" for n, r in zip(names, regs, strict=False)),
         )
         if best_note:
             log.info("    Evidence: %s", best_note)

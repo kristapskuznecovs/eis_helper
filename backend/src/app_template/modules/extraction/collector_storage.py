@@ -5,8 +5,9 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any
 
 TABLE_NAME = "procurement_records"
 OPEN_DATA_PORTAL_FIELDS = [
@@ -154,7 +155,7 @@ for portal_field in OPEN_DATA_PORTAL_FIELDS:
     SCHEMA_COLUMNS[portal_field] = "REAL" if portal_field == "rank" else "TEXT"
 
 
-def _first_nonempty_portal_value(raw_api_records: List[Dict[str, Any]], field_name: str) -> Any:
+def _first_nonempty_portal_value(raw_api_records: list[dict[str, Any]], field_name: str) -> Any:
     for record in raw_api_records:
         value = record.get(field_name)
         if value not in (None, ""):
@@ -163,18 +164,18 @@ def _first_nonempty_portal_value(raw_api_records: List[Dict[str, Any]], field_na
 
 
 def _build_storage_row(
-    procurement_record: Dict[str, Any],
+    procurement_record: dict[str, Any],
     *,
     ingested_at: str,
     classified_at: str,
     classifier_model: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     row = dict(procurement_record)
     raw_api_records = row.get("raw_api_records")
     if not isinstance(raw_api_records, list):
         raw_api_records = []
 
-    storage_row: Dict[str, Any] = {
+    storage_row: dict[str, Any] = {
         "procurement_record_key": procurement_record_storage_key(row),
         "procurement_id": str(row.get("procurement_id") or "") or None,
         "procurement_url": str(row.get("procurement_url") or ""),
@@ -361,7 +362,7 @@ def ensure_procurement_record_database(db_path: Path) -> None:
         )
 
 
-def procurement_record_storage_key(procurement_record: Dict[str, Any]) -> str:
+def procurement_record_storage_key(procurement_record: dict[str, Any]) -> str:
     procurement_id = str(procurement_record.get("procurement_id") or "").strip()
     if procurement_id:
         return f"id:{procurement_id}"
@@ -373,7 +374,7 @@ def procurement_record_storage_key(procurement_record: Dict[str, Any]) -> str:
 
 def upsert_procurement_records(
     db_path: Path,
-    procurement_records: Iterable[Dict[str, Any]],
+    procurement_records: Iterable[dict[str, Any]],
     *,
     ingested_at: str,
     classified_at: str,
@@ -410,11 +411,11 @@ def upsert_procurement_records(
 
 def initialize_procurement_records(
     db_path: Path,
-    records: Iterable[Dict[str, Any]],
+    records: Iterable[dict[str, Any]],
     *,
     ingested_at: str,
 ) -> int:
-    prepared_records: List[Dict[str, Any]] = []
+    prepared_records: list[dict[str, Any]] = []
     for record in records:
         row = dict(record)
         row.setdefault("classification_domain", "unknown")
@@ -435,7 +436,7 @@ def initialize_procurement_records(
 
 def update_extraction_results(
     db_path: Path,
-    extraction_results: Iterable[Dict[str, Any]],
+    extraction_results: Iterable[dict[str, Any]],
     *,
     extracted_at: str,
 ) -> int:
@@ -543,7 +544,7 @@ def update_extraction_results(
     return rows_updated
 
 
-def load_procurement_records(db_path: Path) -> List[Dict[str, Any]]:
+def load_procurement_records(db_path: Path) -> list[dict[str, Any]]:
     ensure_procurement_record_database(db_path)
     with sqlite3.connect(db_path) as conn:
         conn.row_factory = sqlite3.Row
@@ -554,7 +555,7 @@ def load_procurement_records(db_path: Path) -> List[Dict[str, Any]]:
             ORDER BY year ASC, procurement_id ASC, procurement_url ASC
             """
         ).fetchall()
-    loaded: List[Dict[str, Any]] = []
+    loaded: list[dict[str, Any]] = []
     for row in rows:
         parsed = json.loads(str(row["raw_procurement_record_json"]))
         if isinstance(parsed, dict):
@@ -562,7 +563,7 @@ def load_procurement_records(db_path: Path) -> List[Dict[str, Any]]:
     return loaded
 
 
-def load_procurement_records_for_pipeline(db_path: Path) -> List[Dict[str, Any]]:
+def load_procurement_records_for_pipeline(db_path: Path) -> list[dict[str, Any]]:
     ensure_procurement_record_database(db_path)
     with sqlite3.connect(db_path) as conn:
         conn.row_factory = sqlite3.Row
@@ -573,7 +574,7 @@ def load_procurement_records_for_pipeline(db_path: Path) -> List[Dict[str, Any]]
             ORDER BY year ASC, procurement_id ASC, procurement_url ASC
             """
         ).fetchall()
-    loaded: List[Dict[str, Any]] = []
+    loaded: list[dict[str, Any]] = []
     for row in rows:
         parsed = json.loads(str(row["raw_procurement_record_json"]))
         if not isinstance(parsed, dict):
@@ -604,7 +605,7 @@ def load_procurement_records_for_pipeline(db_path: Path) -> List[Dict[str, Any]]
     return loaded
 
 
-def load_procurement_records_by_keys(db_path: Path, procurement_record_keys: Iterable[str]) -> List[Dict[str, Any]]:
+def load_procurement_records_by_keys(db_path: Path, procurement_record_keys: Iterable[str]) -> list[dict[str, Any]]:
     ensure_procurement_record_database(db_path)
     keys = [str(key) for key in procurement_record_keys if str(key).strip()]
     if not keys:
@@ -621,7 +622,7 @@ def load_procurement_records_by_keys(db_path: Path, procurement_record_keys: Ite
             """,
             keys,
         ).fetchall()
-    loaded: List[Dict[str, Any]] = []
+    loaded: list[dict[str, Any]] = []
     for row in rows:
         parsed = json.loads(str(row["raw_procurement_record_json"]))
         if isinstance(parsed, dict):
@@ -631,7 +632,7 @@ def load_procurement_records_by_keys(db_path: Path, procurement_record_keys: Ite
 
 def update_procurement_report_metadata(
     db_path: Path,
-    procurement_record: Dict[str, Any],
+    procurement_record: dict[str, Any],
     *,
     downloaded_at: str,
 ) -> None:

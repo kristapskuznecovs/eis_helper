@@ -13,7 +13,6 @@ from __future__ import annotations
 import logging
 import zipfile
 from pathlib import Path
-from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +34,7 @@ class ExtractedDocument:
         return f"ExtractedDocument(filename='{self.filename}', size={len(self.content)}, ext='{self.extension}')"
 
 
-def extract_from_edoc(edoc_path: str | Path) -> List[ExtractedDocument]:
+def extract_from_edoc(edoc_path: str | Path) -> list[ExtractedDocument]:
     """
     Extract documents from .edoc archive (ASIC-E container).
 
@@ -92,7 +91,7 @@ def extract_from_edoc(edoc_path: str | Path) -> List[ExtractedDocument]:
     return documents
 
 
-def extract_from_zip(zip_path: str | Path) -> List[ExtractedDocument]:
+def extract_from_zip(zip_path: str | Path) -> list[ExtractedDocument]:
     """
     Extract documents from regular .zip archive.
 
@@ -103,7 +102,7 @@ def extract_from_zip(zip_path: str | Path) -> List[ExtractedDocument]:
     return extract_from_edoc(zip_path)
 
 
-def extract_from_rar(rar_path: str | Path) -> List[ExtractedDocument]:
+def extract_from_rar(rar_path: str | Path) -> list[ExtractedDocument]:
     """
     Extract documents from .rar archive.
 
@@ -158,7 +157,7 @@ def extract_from_rar(rar_path: str | Path) -> List[ExtractedDocument]:
     return documents
 
 
-def extract_documents_from_archive(archive_path: str | Path) -> List[ExtractedDocument]:
+def extract_documents_from_archive(archive_path: str | Path) -> list[ExtractedDocument]:
     """
     Auto-detect archive type and extract documents.
 
@@ -183,7 +182,7 @@ def extract_documents_from_archive(archive_path: str | Path) -> List[ExtractedDo
 
 
 # Convenience function for text extraction integration
-def get_archive_content_as_bytes(archive_path: str | Path) -> Optional[bytes]:
+def get_archive_content_as_bytes(archive_path: str | Path) -> bytes | None:
     """
     Extract the main document from an archive and return its bytes.
 

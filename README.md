@@ -1,111 +1,98 @@
-# Modular Monolith Template
+# EIS Helper
 
-Opinionated starter template for:
+Latvian public procurement intelligence platform built on top of [EIS](https://www.eis.gov.lv) (Elektroniskā iepirkumu sistēma) — Latvia's national procurement portal.
 
-- `apps/web` with Vite + React + Tailwind
-- `backend` with FastAPI
-- PostgreSQL + SQLAlchemy ORM + Alembic
-- optional async workers behind a queue abstraction
-- AI-assisted OCR / extraction workflows without provider lock-in
+## What it does
 
-## Why this template exists
+- **Tender search** — find open public tenders by keyword, CPV code, planning region, contract value, deadline, and procedure type
+- **AI chat** — conversational search assistant (GPT-4o-mini) that asks one question at a time and builds filters from natural language
+- **Analytics dashboards** — top winners/buyers by awarded value, regional distribution, win rates, multi-lot stats, buyer concentration
+- **Company intelligence** — bid history, win rates, close-loss analysis, CPV sector specializations
+- **CKAN data sync** — pulls procurement announcements, results, participants, amendments, purchase orders, and deliveries from [data.gov.lv](https://data.gov.lv)
 
-This template is designed to stay usable after the first month. It avoids the common failure modes:
+Primary focus is construction procurement (CPV prefix `45`). Supports Latvian and English.
 
-- flat `frontend/` roots that break when you add a second app
-- generic `services/` dumping grounds
-- business logic inside route handlers
-- provider-specific AI code spread across modules
-- direct Celery coupling in domain code
-- runtime files mixed with checked-in database assets
+## Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS, next-intl |
+| Backend | FastAPI, SQLAlchemy 2.0, Alembic, Pydantic, Uvicorn |
+| Primary DB | PostgreSQL (users, auth, procurements) |
+| Analytics DB | SQLite (read-only, checked in at `database/`) |
+| AI | OpenAI SDK (gpt-4o-mini) |
+| Storage | Local or S3/MinIO |
+| Jobs | Inline (default) or Celery + Redis |
+| Packaging | uv |
 
 ## Quick start
 
-1. Copy this template to a new project directory.
-2. Run the bootstrap script:
-
 ```bash
-make bootstrap NAME=my_project
-```
-
-3. Copy `.env.example` to `.env`.
-4. Run:
-
-```bash
+cp .env.example .env          # fill in secrets
 cd backend && uv sync --extra dev && cd ..
-make up
-make migrate
-make dev
+make up                       # start PostgreSQL and MinIO via Docker
+make migrate                  # run Alembic migrations
+make dev                      # start backend (:8000) and frontend (:8080)
 ```
 
-`uv sync` will also generate `backend/uv.lock`, which should be committed in real projects.
-
-## Included implementation details
-
-This template already includes:
-
-- a bootstrap rename script in `scripts/bootstrap.py`
-- an initial Alembic migration for `users` and `documents`
-- a storage factory so modules do not import a concrete storage backend directly
-- CI workflow for Ruff, Pyright, pytest, and frontend checks
-- runbooks for AI pipelines and adding new modules
-- request-scoped structured logging with `X-Request-ID`
-- a standardized JSON error envelope
-- swappable queue backends behind `shared.jobs.queue`
-- swappable local/S3 storage behind `shared.storage.service`
-- MinIO in the workers Docker profile for local S3-compatible testing
-
-## Python quality tools
-
-The backend workflow uses:
-
-- `uv` for dependency management
-- Ruff for linting and formatting
-- Pyright for type checking
-- `pytest` + coverage for tests
-- `pre-commit` to enforce checks before commit
-
-Common commands:
-
-```bash
-make lint
-make format
-make fix
-make typecheck
-make test-cov
-```
-
-## Observability contract
-
-The backend includes structured request logging and standardized API errors.
-
-- every request gets `X-Request-ID`
-- logs are correlated by `request_id`
-- authenticated requests can bind `user_id` into log context
-- async tasks bind their own `request_id`
-- errors return a stable JSON envelope with `error.code`, `error.message`, and `error.request_id`
-
-Install hooks once per clone:
+Install git hooks once per clone:
 
 ```bash
 make hooks
 ```
 
-For optional workers:
+## Repo layout
+
+```
+apps/web        Next.js frontend
+backend         FastAPI backend
+database        checked-in SQLite analytics database
+data            gitignored runtime files (uploads, OCR output, exports)
+infra/docker    Docker Compose files
+docs            ADRs and runbooks
+scripts         bootstrap and utility scripts
+```
+
+## Backend modules
+
+| Module | Responsibility |
+|---|---|
+| `auth` | Login, registration, JWT token issuance |
+| `users` | User profiles |
+| `documents` | File upload and storage |
+| `chat` | AI-powered tender search, company CPV profiling |
+| `extraction` | CKAN sync pipeline, procurement classification, analytics queries |
+
+## Common commands
+
+```bash
+make lint          # Ruff check + frontend lint
+make format        # Ruff format
+make fix           # Ruff --fix + format
+make typecheck     # Pyright + tsc --noEmit
+make test          # pytest + frontend tests
+make test-cov      # pytest with coverage report
+make migrate       # alembic upgrade head
+make makemigrations MSG="description"   # alembic revision --autogenerate
+```
+
+## Environment variables
+
+Key variables to set in `.env`:
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `JWT_SECRET_KEY` | Must be changed from the default |
+| `OPENAI_API_KEY` | Required for chat and procurement classification |
+| `STORAGE_BACKEND` | `local` (default) or `s3` |
+| `JOBS_BACKEND` | `inline` (default) or `celery` |
+| `REDIS_URL` | Required only when `JOBS_BACKEND=celery` |
+
+## Optional workers
 
 ```bash
 docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.workers.yml --profile workers up -d
-```
-
-## Repo shape
-
-```text
-apps/web        Vite frontend
-backend         FastAPI backend
-database        checked-in SQL/bootstrap assets
-data            gitignored runtime files
-infra/docker    containers and compose files
-docs            ADRs and runbooks
 ```
 
 Read [ARCHITECTURE.md](./ARCHITECTURE.md) before adding code.

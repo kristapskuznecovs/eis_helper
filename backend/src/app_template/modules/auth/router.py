@@ -2,7 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app_template.deps import get_db
-from app_template.modules.auth.schemas import LoginRequest, RegisterRequest, TokenResponse
+from app_template.modules.auth.schemas import (
+    LoginRequest,
+    RegisterRequest,
+    TokenResponse,
+)
 from app_template.modules.auth.service import login_user, register_user
 from app_template.shared.errors.exceptions import AppError
 

@@ -1,5 +1,5 @@
 try:
-    from celery import Celery
+    from celery import Celery  # pyright: ignore[reportMissingImports]
 except Exception:  # pragma: no cover
     Celery = None  # type: ignore[assignment]
 

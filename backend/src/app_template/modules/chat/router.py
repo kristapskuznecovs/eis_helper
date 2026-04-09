@@ -130,6 +130,7 @@ def search(request: SearchRequest, db: Session = Depends(get_db)) -> Any:
 @router.get("/procedure-types")
 def procedure_types(db: Session = Depends(get_db)) -> list[str]:
     from sqlalchemy import distinct
+
     from app_template.modules.chat.models import Procurement
     rows = db.query(distinct(Procurement.procedure_type)).filter(
         Procurement.procedure_type.isnot(None),
@@ -147,19 +148,19 @@ def company_cpv(req: CompanyCpvRequest, db: Session = Depends(get_db)) -> Any:
 @router.post("/company-suggest")
 def company_suggest(req: CompanySuggestRequest, db: Session = Depends(get_db)) -> list[CompanySuggestion]:
     service = SearchService()
-    return service.suggest_companies(req.query, db)
+    return [CompanySuggestion.model_validate(item) for item in service.suggest_companies(req.query, db)]
 
 
 @router.post("/company-resolve")
 def company_resolve(req: CompanyResolveRequest, db: Session = Depends(get_db)) -> list[CompanyCandidate]:
     service = SearchService()
-    return service.resolve_company_candidates(req.query, db)
+    return [CompanyCandidate.model_validate(item) for item in service.resolve_company_candidates(req.query, db)]
 
 
 @router.get("/my-activity")
 def my_activity(company: str, reg_number: str | None = None, db: Session = Depends(get_db)) -> MyActivityResponse:
     service = SearchService()
-    return service.get_my_activity(company, db, reg_number=reg_number)
+    return MyActivityResponse.model_validate(service.get_my_activity(company, db, reg_number=reg_number))
 
 
 @router.post("/sync")

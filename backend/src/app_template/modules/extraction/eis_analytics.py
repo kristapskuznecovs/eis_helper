@@ -3,22 +3,20 @@
 
 from __future__ import annotations
 
-import argparse
 import json
 import sqlite3
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from datetime import datetime
+from http.server import BaseHTTPRequestHandler
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
-from urllib.parse import parse_qs, urlparse
+from typing import Any, Protocol, cast
 
 try:
     from .collector_companies import normalize_party_name as _normalize_party_name
     _COMPANIES_MODULE_AVAILABLE = True
 except ImportError:
+    _normalize_party_name = None
     _COMPANIES_MODULE_AVAILABLE = False
 
 ROOT = Path(__file__).resolve().parent
@@ -81,7 +79,7 @@ def text_response(
     handler.wfile.write(data)
 
 
-def parse_bool(value: Optional[str]) -> Optional[bool]:
+def parse_bool(value: str | None) -> bool | None:
     if value is None or value == "":
         return None
     normalized = value.strip().lower()
@@ -92,7 +90,7 @@ def parse_bool(value: Optional[str]) -> Optional[bool]:
     return None
 
 
-def safe_float(value: Any) -> Optional[float]:
+def safe_float(value: Any) -> float | None:
     if value in (None, ""):
         return None
     try:
@@ -101,7 +99,7 @@ def safe_float(value: Any) -> Optional[float]:
         return None
 
 
-def safe_int(value: Any) -> Optional[int]:
+def safe_int(value: Any) -> int | None:
     if value in (None, ""):
         return None
     try:
@@ -110,7 +108,7 @@ def safe_int(value: Any) -> Optional[int]:
         return None
 
 
-def pct(numerator: float, denominator: float) -> Optional[float]:
+def pct(numerator: float, denominator: float) -> float | None:
     if not denominator:
         return None
     return round((numerator / denominator) * 100.0, 1)
@@ -120,8 +118,8 @@ def normalize_whitespace(value: str) -> str:
     return " ".join(value.split())
 
 
-def normalize_party_name(value: Optional[str]) -> str:
-    if _COMPANIES_MODULE_AVAILABLE:
+def normalize_party_name(value: str | None) -> str:
+    if _COMPANIES_MODULE_AVAILABLE and _normalize_party_name is not None:
         return _normalize_party_name(value)
     if not value:
         return "Nav norādīts"
@@ -135,13 +133,13 @@ def normalize_party_name(value: Optional[str]) -> str:
     return cleaned or "Nav norādīts"
 
 
-def pretty_party_name(value: Optional[str]) -> str:
+def pretty_party_name(value: str | None) -> str:
     if not value:
         return "Nav norādīts"
     return normalize_whitespace(str(value).replace("„", '"').replace("“", '"').replace("”", '"').strip())
 
 
-def extract_location_bucket(location: Optional[str]) -> str:
+def extract_location_bucket(location: str | None) -> str:
     if not location:
         return "Nav norādīta"
     text = location.strip()
@@ -214,7 +212,7 @@ PLANNING_REGION_KEYWORDS = {
 }
 
 
-def derive_planning_region(location: Optional[str]) -> str:
+def derive_planning_region(location: str | None) -> str:
     bucket = extract_location_bucket(location)
     lowered = bucket.lower()
     if bucket == "Latvija":
@@ -227,11 +225,16 @@ def derive_planning_region(location: Optional[str]) -> str:
 
 @dataclass
 class Filters:
-    year: Optional[int] = None
-    planning_region: Optional[str] = None
-    multi_lot: Optional[bool] = None
-    buyer: Optional[str] = None
-    category: Optional[str] = None
+    year: int | None = None
+    planning_region: str | None = None
+    multi_lot: bool | None = None
+    buyer: str | None = None
+    category: str | None = None
+
+
+class AnalyticsRepositoryProtocol(Protocol):
+    def fetch_rows(self, filters: Filters) -> list[dict[str, Any]]: ...
+    def available_filters(self) -> dict[str, Any]: ...
 
 
 class AnalyticsRepository:
@@ -243,7 +246,7 @@ class AnalyticsRepository:
         conn.row_factory = sqlite3.Row
         return conn
 
-    def _fetch_company_name_map(self, conn: sqlite3.Connection) -> Dict[int, str]:
+    def _fetch_company_name_map(self, conn: sqlite3.Connection) -> dict[int, str]:
         """Load {company_id: canonical_name} from the companies table if it exists."""
         try:
             rows = conn.execute("SELECT id, canonical_name FROM companies").fetchall()
@@ -251,10 +254,10 @@ class AnalyticsRepository:
         except sqlite3.OperationalError:
             return {}
 
-    def _procurement_record_columns(self, conn: sqlite3.Connection) -> Set[str]:
+    def _procurement_record_columns(self, conn: sqlite3.Connection) -> set[str]:
         return {row["name"] for row in conn.execute("PRAGMA table_info(procurement_records)").fetchall()}
 
-    def fetch_rows(self, filters: Filters) -> List[Dict[str, Any]]:
+    def fetch_rows(self, filters: Filters) -> list[dict[str, Any]]:
         with self._connect() as conn:
             available_columns = self._procurement_record_columns(conn)
             selected_columns = list(DATASET_BASE_COLUMNS)
@@ -266,7 +269,7 @@ class AnalyticsRepository:
                 + ",\n    ".join(selected_columns)
                 + "\nFROM procurement_records\nWHERE report_document_path LIKE ?"
             )
-            params: List[Any] = [DATASET_REPORT_PREFIX]
+            params: list[Any] = [DATASET_REPORT_PREFIX]
             if filters.year is not None:
                 query += " AND year = ?"
                 params.append(filters.year)
@@ -279,7 +282,7 @@ class AnalyticsRepository:
             query += " ORDER BY year DESC, procurement_id DESC"
             rows = [dict(row) for row in conn.execute(query, params).fetchall()]
             company_name_map = self._fetch_company_name_map(conn)
-        enriched: List[Dict[str, Any]] = []
+        enriched: list[dict[str, Any]] = []
         for row in rows:
             row["estimated_value_eur"] = safe_float(row.get("estimated_value_eur"))
             row["procurement_winner_suggested_price_eur"] = safe_float(
@@ -306,7 +309,7 @@ class AnalyticsRepository:
             enriched.append(row)
         return enriched
 
-    def available_filters(self) -> Dict[str, Any]:
+    def available_filters(self) -> dict[str, Any]:
         rows = self.fetch_rows(Filters())
         years = sorted({row["year"] for row in rows if row.get("year") is not None})
         buyers = sorted({row["purchaser_name"] for row in rows if row.get("purchaser_name")})
@@ -315,7 +318,7 @@ class AnalyticsRepository:
         return {"years": years, "buyers": buyers, "planning_regions": regions, "categories": categories}
 
     @staticmethod
-    def _derive_category(row: Dict[str, Any]) -> str:
+    def _derive_category(row: dict[str, Any]) -> str:
         for key in ("contract_scope_type", "classification_final_category", "classification_scope_type"):
             value = row.get(key)
             if isinstance(value, str):
@@ -326,10 +329,10 @@ class AnalyticsRepository:
 
 
 class AnalyticsService:
-    def __init__(self, repository: AnalyticsRepository) -> None:
+    def __init__(self, repository: AnalyticsRepositoryProtocol) -> None:
         self.repository = repository
 
-    def build_dashboard(self, filters: Filters) -> Dict[str, Any]:
+    def build_dashboard(self, filters: Filters) -> dict[str, Any]:
         rows = self.repository.fetch_rows(filters)
         total_projects = len(rows)
 
@@ -337,19 +340,19 @@ class AnalyticsService:
         estimated_rows = [row for row in rows if row.get("estimated_value_eur") is not None]
         multi_lot_rows = [row for row in rows if row.get("is_multi_lot")]
         winners_counter = Counter()
-        winners_amounts: Dict[str, float] = defaultdict(float)
+        winners_amounts: dict[str, float] = defaultdict(float)
         buyers_counter = Counter()
-        buyers_amounts: Dict[str, float] = defaultdict(float)
+        buyers_amounts: dict[str, float] = defaultdict(float)
         region_counter = Counter()
-        region_amounts: Dict[str, float] = defaultdict(float)
+        region_amounts: dict[str, float] = defaultdict(float)
         category_counter = Counter()
-        category_amounts: Dict[str, float] = defaultdict(float)
+        category_amounts: dict[str, float] = defaultdict(float)
         cpv_counter = Counter()
-        cpv_amounts: Dict[str, float] = defaultdict(float)
-        bidder_metrics: Dict[str, Dict[str, Any]] = {}
-        buyer_winner_counts: Dict[str, Counter] = defaultdict(Counter)
-        buyer_winner_amounts: Dict[str, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
-        yearly_stats: Dict[int, Dict[str, Any]] = defaultdict(
+        cpv_amounts: dict[str, float] = defaultdict(float)
+        bidder_metrics: dict[str, dict[str, Any]] = {}
+        buyer_winner_counts: dict[str, Counter] = defaultdict(Counter)
+        buyer_winner_amounts: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        yearly_stats: dict[int, dict[str, Any]] = defaultdict(
             lambda: {
                 "year": None,
                 "projects": 0,
@@ -578,7 +581,7 @@ class AnalyticsService:
             "data_quality": quality_items,
         }
 
-    def list_projects(self, filters: Filters, *, limit: int, offset: int) -> Dict[str, Any]:
+    def list_projects(self, filters: Filters, *, limit: int, offset: int) -> dict[str, Any]:
         rows = self.repository.fetch_rows(filters)
         total = len(rows)
         rows = rows[offset : offset + limit]
@@ -606,11 +609,11 @@ class AnalyticsService:
             )
         return {"total": total, "limit": limit, "offset": offset, "items": items}
 
-    def build_company_view(self, filters: Filters, companies: Optional[List[str]]) -> Dict[str, Any]:
+    def build_company_view(self, filters: Filters, companies: list[str] | None) -> dict[str, Any]:
         rows = self.repository.fetch_rows(filters)
-        bidder_metrics: Dict[str, Dict[str, Any]] = {}
-        buyer_winner_counts: Dict[str, Counter] = defaultdict(Counter)
-        buyer_winner_amounts: Dict[str, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        bidder_metrics: dict[str, dict[str, Any]] = {}
+        buyer_winner_counts: dict[str, Counter] = defaultdict(Counter)
+        buyer_winner_amounts: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
         for row in rows:
             buyer = row.get("buyer_normalized") or "Nav norādīts"
             winner = row.get("winner_normalized") or "Nav norādīts"
@@ -620,7 +623,6 @@ class AnalyticsService:
                 buyer_winner_amounts[buyer][winner] += amount
             self._accumulate_bidder_metrics(bidder_metrics, row)
 
-        bidder_leaderboard = self._build_bidder_leaderboard(bidder_metrics)
         company_options = sorted(
             {
                 alias
@@ -654,11 +656,11 @@ class AnalyticsService:
         regions = Counter()
         cpvs = Counter()
         size_bands = Counter()
-        buyer_stats: Dict[str, Dict[str, Any]] = defaultdict(lambda: {"bids": 0, "wins": 0, "awarded_sum_eur": 0.0})
-        competitor_stats: Dict[str, Dict[str, Any]] = defaultdict(
+        buyer_stats: dict[str, dict[str, Any]] = defaultdict(lambda: {"bids": 0, "wins": 0, "awarded_sum_eur": 0.0})
+        competitor_stats: dict[str, dict[str, Any]] = defaultdict(
             lambda: {"meet_count": 0, "beat_us": 0, "we_beat": 0, "gap_pct_total": 0.0, "gap_count": 0}
         )
-        segment_stats: Dict[tuple[str, str, str], Dict[str, Any]] = defaultdict(
+        segment_stats: dict[tuple[str, str, str], dict[str, Any]] = defaultdict(
             lambda: {"bids": 0, "wins": 0, "avg_competitors_total": 0.0, "count": 0}
         )
 
@@ -765,7 +767,6 @@ class AnalyticsService:
 
         buyer_rows = []
         for buyer, stat in buyer_stats.items():
-            total_projects = stat["bids"]
             concentration = None
             if buyer in buyer_winner_counts and sum(buyer_winner_counts[buyer].values()) >= 5:
                 top_wins = buyer_winner_counts[buyer].most_common(1)[0][1]
@@ -850,7 +851,7 @@ class AnalyticsService:
             },
         }
 
-    def build_purchaser_view(self, filters: Filters, purchaser: Optional[str]) -> Dict[str, Any]:
+    def build_purchaser_view(self, filters: Filters, purchaser: str | None) -> dict[str, Any]:
         rows = self.repository.fetch_rows(filters)
         purchaser_options = sorted({row["purchaser_name"] for row in rows if row.get("purchaser_name")})
         if not purchaser and purchaser_options:
@@ -864,17 +865,17 @@ class AnalyticsService:
         cpv_counter = Counter()
         yearly_counter = Counter()
         supplier_counts = Counter()
-        supplier_amounts: Dict[str, float] = defaultdict(float)
+        supplier_amounts: dict[str, float] = defaultdict(float)
         evaluation_counter = Counter()
-        segment_stats: Dict[tuple[str, str, str], Dict[str, Any]] = defaultdict(
+        segment_stats: dict[tuple[str, str, str], dict[str, Any]] = defaultdict(
             lambda: {"projects": 0, "awarded_sum_eur": 0.0, "avg_competitors_total": 0.0, "single_bidder_count": 0}
         )
         bidder_presence = Counter()
         bidder_wins_against_buyer = Counter()
-        purchaser_amounts_by_region: Dict[str, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
-        purchaser_amounts_by_category: Dict[str, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
-        supplier_amounts_by_region: Dict[str, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
-        supplier_amounts_by_category: Dict[str, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        purchaser_amounts_by_region: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        purchaser_amounts_by_category: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        supplier_amounts_by_region: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        supplier_amounts_by_category: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
 
         total_projects = len(selected_rows)
         total_awarded = 0.0
@@ -1060,7 +1061,7 @@ class AnalyticsService:
             },
         }
 
-    def build_risk_view(self, filters: Filters) -> Dict[str, Any]:
+    def build_risk_view(self, filters: Filters) -> dict[str, Any]:
         rows = self.repository.fetch_rows(filters)
         total_projects = len(rows)
         with_estimate = 0
@@ -1070,13 +1071,13 @@ class AnalyticsService:
         single_bidder = 0
         low_competition = 0
         buyer_single_bidder = defaultdict(lambda: {"projects": 0, "single_bidder": 0, "awarded_sum_eur": 0.0})
-        buyer_winner_counts: Dict[str, Counter] = defaultdict(Counter)
+        buyer_winner_counts: dict[str, Counter] = defaultdict(Counter)
         pair_close = Counter()
         pair_all = Counter()
         pair_lowest = Counter()
-        pair_keys_by_procurement: Dict[str, Set[Tuple[str, str]]] = {}
-        winner_stats: Dict[str, Dict[str, Any]] = {}
-        buyer_risk_stats: Dict[str, Dict[str, Any]] = defaultdict(
+        pair_keys_by_procurement: dict[str, set[tuple[str, str]]] = {}
+        winner_stats: dict[str, dict[str, Any]] = {}
+        buyer_risk_stats: dict[str, dict[str, Any]] = defaultdict(
             lambda: {
                 "project_count": 0,
                 "risky_project_count": 0,
@@ -1085,7 +1086,7 @@ class AnalyticsService:
                 "awarded_sum_eur": 0.0,
             }
         )
-        region_risk_stats: Dict[str, Dict[str, Any]] = defaultdict(
+        region_risk_stats: dict[str, dict[str, Any]] = defaultdict(
             lambda: {
                 "project_count": 0,
                 "risky_project_count": 0,
@@ -1094,7 +1095,7 @@ class AnalyticsService:
                 "awarded_sum_eur": 0.0,
             }
         )
-        category_risk_stats: Dict[str, Dict[str, Any]] = defaultdict(
+        category_risk_stats: dict[str, dict[str, Any]] = defaultdict(
             lambda: {
                 "project_count": 0,
                 "risky_project_count": 0,
@@ -1143,8 +1144,6 @@ class AnalyticsService:
             has_low_competition = participants_count is not None and participants_count <= 2
             is_above_estimate = False
             is_above_estimate_10pct = False
-            is_below_estimate_20pct = False
-
             if estimate not in (None, 0) and award not in (None, 0):
                 with_estimate += 1
                 if award > estimate:
@@ -1155,7 +1154,6 @@ class AnalyticsService:
                     is_above_estimate_10pct = True
                 if award < estimate * 0.8:
                     award_below_estimate_20pct += 1
-                    is_below_estimate_20pct = True
 
             if participants_count is not None:
                 buyer = row.get("purchaser_name") or "Nav norādīts"
@@ -1325,7 +1323,7 @@ class AnalyticsService:
         }
 
     @staticmethod
-    def _build_risky_winner_rows(winner_stats: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _build_risky_winner_rows(winner_stats: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
         rows = []
         for stats in winner_stats.values():
             project_count = stats["project_count"]
@@ -1357,10 +1355,10 @@ class AnalyticsService:
 
     @staticmethod
     def _build_risk_hotspot_rows(
-        item_stats: Dict[str, Dict[str, Any]],
+        item_stats: dict[str, dict[str, Any]],
         *,
         min_projects: int,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         rows = []
         for name, stats in item_stats.items():
             project_count = stats["project_count"]
@@ -1390,7 +1388,7 @@ class AnalyticsService:
         return rows
 
     @staticmethod
-    def _rank_entities(counts: Counter, amounts: Dict[str, float]) -> List[Dict[str, Any]]:
+    def _rank_entities(counts: Counter, amounts: dict[str, float]) -> list[dict[str, Any]]:
         items = []
         for name, project_count in counts.items():
             items.append(
@@ -1403,7 +1401,7 @@ class AnalyticsService:
         items.sort(key=lambda item: (-item["awarded_sum_eur"], -item["project_count"], item["name"]))
         return items
 
-    def _accumulate_bidder_metrics(self, bidder_metrics: Dict[str, Dict[str, Any]], row: Dict[str, Any]) -> None:
+    def _accumulate_bidder_metrics(self, bidder_metrics: dict[str, dict[str, Any]], row: dict[str, Any]) -> None:
         participants_raw = row.get("procurement_participants_json")
         if not participants_raw:
             return
@@ -1470,7 +1468,7 @@ class AnalyticsService:
                         if gap_pct <= 5:
                             metric["close_losses_5pct"] += 1
 
-    def _build_bidder_leaderboard(self, bidder_metrics: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _build_bidder_leaderboard(self, bidder_metrics: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
         items = []
         for metric in bidder_metrics.values():
             applications = metric["applications"]
@@ -1503,9 +1501,9 @@ class AnalyticsService:
 
     def _build_buyer_concentration(
         self,
-        buyer_winner_counts: Dict[str, Counter],
-        buyer_winner_amounts: Dict[str, Dict[str, float]],
-    ) -> List[Dict[str, Any]]:
+        buyer_winner_counts: dict[str, Counter],
+        buyer_winner_amounts: dict[str, dict[str, float]],
+    ) -> list[dict[str, Any]]:
         items = []
         for buyer, counts in buyer_winner_counts.items():
             total_projects = sum(counts.values())
@@ -1531,7 +1529,7 @@ class AnalyticsService:
         return items
 
     @staticmethod
-    def _parse_participants(participants_raw: Any) -> List[Dict[str, Any]]:
+    def _parse_participants(participants_raw: Any) -> list[dict[str, Any]]:
         if not participants_raw:
             return []
         try:
@@ -1541,7 +1539,7 @@ class AnalyticsService:
         return parsed if isinstance(parsed, list) else []
 
     @staticmethod
-    def _size_band(value: Optional[float]) -> str:
+    def _size_band(value: float | None) -> str:
         if value is None:
             return "Nav paredzamās cenas"
         if value < 100000:
@@ -1555,12 +1553,12 @@ class AnalyticsService:
         return "5M+"
 
     @staticmethod
-    def _rank_counter_rows(counter: Counter, label: str) -> List[Dict[str, Any]]:
+    def _rank_counter_rows(counter: Counter, label: str) -> list[dict[str, Any]]:
         rows = [{"name": name, "count": count, "label": label} for name, count in counter.most_common(10)]
         return rows
 
     @staticmethod
-    def _rank_amount_map(amounts: Dict[str, float], highlight_name: Optional[str] = None) -> List[Dict[str, Any]]:
+    def _rank_amount_map(amounts: dict[str, float], highlight_name: str | None = None) -> list[dict[str, Any]]:
         rows = []
         for name, amount in amounts.items():
             rows.append(
@@ -1574,7 +1572,7 @@ class AnalyticsService:
         return rows
 
     @staticmethod
-    def _decision_lag_days(bid_deadline: Optional[str], decision_date: Optional[str]) -> Optional[int]:
+    def _decision_lag_days(bid_deadline: str | None, decision_date: str | None) -> int | None:
         if not bid_deadline or not decision_date:
             return None
         deadline_formats = ("%Y-%m-%dT%H:%M:%S", "%d.%m.%Y %H:%M", "%d.%m.%Y")
@@ -1602,7 +1600,7 @@ class AnalyticsService:
 # Postgres-backed analytics repository
 # ---------------------------------------------------------------------------
 
-CPV_CATEGORY_MAP: Dict[str, str] = {
+CPV_CATEGORY_MAP: dict[str, str] = {
     "03": "Lauksaimniecība",
     "09": "Enerģija",
     "14": "Izrakteņi",
@@ -1650,7 +1648,7 @@ CPV_CATEGORY_MAP: Dict[str, str] = {
 }
 
 
-def cpv_to_category(cpv: Optional[str]) -> str:
+def cpv_to_category(cpv: str | None) -> str:
     if not cpv:
         return "unknown"
     code = cpv.strip().lstrip('="')[:2]
@@ -1663,13 +1661,13 @@ class PostgresAnalyticsRepository:
     def __init__(self, dsn: str) -> None:
         self.dsn = dsn
 
-    def fetch_rows(self, filters: Filters) -> List[Dict[str, Any]]:
+    def fetch_rows(self, filters: Filters) -> list[dict[str, Any]]:
         import psycopg
 
         where_clauses = [
             "p.status IN ('Līgums noslēgts','Noslēgts','Lēmums pieņemts','Uzsākta līguma slēgšana')"
         ]
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
 
         if filters.year is not None:
             where_clauses.append(
@@ -1726,13 +1724,13 @@ WHERE {where_sql}
 ORDER BY p.submission_deadline DESC, p.procurement_id DESC
 """
         with psycopg.connect(self.dsn) as conn:
-            cur = conn.execute(sql, params)
+            cur = conn.execute(cast(Any, sql), params)
             raw_rows = cur.fetchall()
-            col_names = [desc.name for desc in cur.description]
+            col_names = [desc.name for desc in cur.description or ()]
 
-        rows: List[Dict[str, Any]] = []
+        rows: list[dict[str, Any]] = []
         for raw in raw_rows:
-            row = dict(zip(col_names, raw))
+            row = dict(zip(col_names, raw, strict=False))
             row["estimated_value_eur"] = safe_float(row.get("estimated_value_eur"))
             row["procurement_winner_suggested_price_eur"] = safe_float(
                 row.get("procurement_winner_suggested_price_eur")
@@ -1765,7 +1763,7 @@ ORDER BY p.submission_deadline DESC, p.procurement_id DESC
 
         # Second query: fetch participants for participant-level analytics
         ids = [row["procurement_id"] for row in rows]
-        id_to_participants: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        id_to_participants: dict[str, list[dict[str, Any]]] = defaultdict(list)
         with psycopg.connect(self.dsn) as conn:
             part_rows = conn.execute(
                 """
@@ -1786,7 +1784,7 @@ ORDER BY p.submission_deadline DESC, p.procurement_id DESC
 
         return rows
 
-    def available_filters(self) -> Dict[str, Any]:
+    def available_filters(self) -> dict[str, Any]:
         import psycopg
 
         with psycopg.connect(self.dsn) as conn:
@@ -1812,6 +1810,5 @@ ORDER BY p.submission_deadline DESC, p.procurement_id DESC
         return {"years": years, "buyers": buyers, "planning_regions": regions, "categories": categories}
 
     @staticmethod
-    def _derive_category(row: Dict[str, Any]) -> str:
+    def _derive_category(row: dict[str, Any]) -> str:
         return cpv_to_category(row.get("cpv_main"))
-

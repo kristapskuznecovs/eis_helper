@@ -6,7 +6,10 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from lib.collector_storage import initialize_procurement_records, update_procurement_report_metadata
+from lib.collector_storage import (
+    initialize_procurement_records,
+    update_procurement_report_metadata,
+)
 from pipelines import download_reports
 
 
