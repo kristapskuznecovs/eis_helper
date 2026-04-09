@@ -1,0 +1,332 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.eis/config/providers/openai_agent.schema.json",
+  "title": "OpenAI Agent Configuration Schema",
+  "description": "Complete schema for OpenAI API configuration including Chat Completions and Responses API",
+  "type": "object",
+  "required": ["provider", "model", "max_tokens", "openai"],
+  "properties": {
+    "provider": {
+      "type": "string",
+      "const": "openai",
+      "description": "Provider identifier - must be 'openai'"
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1,
+      "description": "OpenAI model identifier (e.g., 'gpt-4o', 'gpt-4.1-mini', 'o1', 'o3-mini')",
+      "examples": ["gpt-4o", "gpt-4.1-mini", "gpt-5.2", "o1", "o3-mini"]
+    },
+    "max_tokens": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum number of tokens to generate"
+    },
+    "openai": {
+      "type": "object",
+      "description": "OpenAI-specific configuration",
+      "required": ["api_style"],
+      "properties": {
+        "api_style": {
+          "type": "string",
+          "enum": ["responses", "chat_completions", "assistants"],
+          "description": "Which OpenAI API to use"
+        },
+        "response_api": {
+          "type": "object",
+          "description": "Configuration for Responses API (recommended for new projects)",
+          "properties": {
+            "store": {
+              "type": "boolean",
+              "description": "Maintain state from turn to turn, preserving reasoning and tool context"
+            },
+            "include": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Content types to include in response"
+            },
+            "truncation": {
+              "type": "string",
+              "enum": ["auto", "disabled"],
+              "description": "How to handle context truncation"
+            },
+            "previous_response_id": {
+              "anyOf": [{"type": "string"}, {"type": "null"}],
+              "description": "Chain responses together by passing previous response ID"
+            },
+            "background": {
+              "type": "boolean",
+              "description": "Process request asynchronously in the background"
+            },
+            "reasoning": {
+              "type": "object",
+              "description": "Reasoning configuration for o1/o3 models",
+              "properties": {
+                "effort": {
+                  "type": "string",
+                  "enum": ["low", "medium", "high"],
+                  "description": "Amount of reasoning effort for thinking models"
+                },
+                "summary": {
+                  "type": "string",
+                  "enum": ["auto", "detailed", "none"],
+                  "description": "Level of reasoning summary to include"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "chat_completions": {
+          "type": "object",
+          "description": "Configuration for Chat Completions API",
+          "properties": {
+            "messages": {
+              "type": "array",
+              "description": "Array of conversation messages",
+              "items": {
+                "type": "object",
+                "required": ["role", "content"],
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": ["system", "user", "assistant", "tool"]
+                  },
+                  "content": {
+                    "anyOf": [
+                      {"type": "string"},
+                      {"type": "array"}
+                    ]
+                  },
+                  "name": {"type": "string"},
+                  "tool_call_id": {"type": "string"},
+                  "tool_calls": {"type": "array"}
+                }
+              }
+            },
+            "temperature": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2,
+              "description": "Sampling temperature (0-2). Lower = more deterministic, higher = more creative"
+            },
+            "top_p": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Nucleus sampling. Alternative to temperature. Use one or the other, not both"
+            },
+            "n": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Number of chat completion choices to generate"
+            },
+            "stream": {
+              "type": "boolean",
+              "description": "Enable streaming responses using server-sent events"
+            },
+            "stream_options": {
+              "type": "object",
+              "properties": {
+                "include_usage": {
+                  "type": "boolean",
+                  "description": "Include token usage in streaming response"
+                }
+              },
+              "additionalProperties": true
+            },
+            "stop": {
+              "anyOf": [
+                {"type": "string"},
+                {
+                  "type": "array",
+                  "items": {"type": "string"},
+                  "maxItems": 4
+                },
+                {"type": "null"}
+              ],
+              "description": "Up to 4 sequences where the API will stop generating (not supported on o3/o4 models)"
+            },
+            "max_tokens": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum tokens in completion (deprecated, use max_completion_tokens)"
+            },
+            "max_completion_tokens": {
+              "anyOf": [
+                {"type": "integer", "minimum": 1},
+                {"type": "null"}
+              ],
+              "description": "Upper bound for tokens that can be generated"
+            },
+            "presence_penalty": {
+              "type": "number",
+              "minimum": -2,
+              "maximum": 2,
+              "description": "Penalize tokens that have appeared (-2 to 2)"
+            },
+            "frequency_penalty": {
+              "type": "number",
+              "minimum": -2,
+              "maximum": 2,
+              "description": "Penalize tokens based on frequency (-2 to 2)"
+            },
+            "logit_bias": {
+              "type": "object",
+              "additionalProperties": {"type": "number"},
+              "description": "Modify likelihood of specified tokens appearing"
+            },
+            "logprobs": {
+              "type": "boolean",
+              "description": "Return log probabilities of output tokens"
+            },
+            "top_logprobs": {
+              "anyOf": [
+                {"type": "integer", "minimum": 0, "maximum": 20},
+                {"type": "null"}
+              ],
+              "description": "Number of most likely tokens to return at each position (0-20)"
+            },
+            "user": {
+              "anyOf": [{"type": "string"}, {"type": "null"}],
+              "description": "Unique identifier for end-user (for abuse monitoring)"
+            },
+            "seed": {
+              "anyOf": [{"type": "integer"}, {"type": "null"}],
+              "description": "Seed for deterministic sampling (best effort)"
+            },
+            "service_tier": {
+              "type": "string",
+              "enum": ["auto", "default", "flex"],
+              "description": "Processing priority tier"
+            },
+            "tools": {
+              "type": "array",
+              "description": "List of tools the model may call",
+              "items": {
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["function"]
+                  },
+                  "function": {
+                    "type": "object",
+                    "required": ["name"],
+                    "properties": {
+                      "name": {"type": "string"},
+                      "description": {"type": "string"},
+                      "parameters": {"type": "object"},
+                      "strict": {"type": "boolean"}
+                    }
+                  }
+                }
+              }
+            },
+            "tool_choice": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": ["none", "auto", "required"]
+                },
+                {
+                  "type": "object",
+                  "required": ["type"],
+                  "properties": {
+                    "type": {"const": "function"},
+                    "function": {
+                      "type": "object",
+                      "required": ["name"],
+                      "properties": {
+                        "name": {"type": "string"}
+                      }
+                    }
+                  }
+                }
+              ],
+              "description": "Control which tool is called"
+            },
+            "parallel_tool_calls": {
+              "type": "boolean",
+              "description": "Enable parallel function calling"
+            },
+            "response_format": {
+              "type": "object",
+              "description": "Format for model output (JSON mode, structured outputs)",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["text", "json_object", "json_schema"]
+                },
+                "json_schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {"type": "string"},
+                    "description": {"type": "string"},
+                    "schema": {"type": "object"},
+                    "strict": {"type": "boolean"}
+                  }
+                }
+              }
+            },
+            "metadata": {
+              "type": "object",
+              "additionalProperties": {"type": "string"},
+              "description": "Up to 16 key-value pairs for storing additional information"
+            },
+            "audio": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "voice": {
+                      "type": "string",
+                      "enum": ["alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse"]
+                    },
+                    "format": {
+                      "type": "string",
+                      "enum": ["wav", "mp3", "flac", "opus", "pcm16"]
+                    }
+                  }
+                },
+                {"type": "null"}
+              ],
+              "description": "Audio output configuration"
+            },
+            "modalities": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["text", "audio"]
+              },
+              "description": "Output modalities to generate"
+            },
+            "prediction": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {"const": "content"},
+                    "content": {
+                      "anyOf": [
+                        {"type": "string"},
+                        {"type": "array"}
+                      ]
+                    }
+                  }
+                },
+                {"type": "null"}
+              ],
+              "description": "Predicted output for faster response"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}

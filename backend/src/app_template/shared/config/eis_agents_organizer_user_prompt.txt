@@ -1,0 +1,7 @@
+Klasificējiet šo būvniecības iepirkuma dokumentu.
+
+Projekta konteksts:
+{{PROJECT_CONTEXT}}
+
+Dokumenta informācija:
+{{DOCUMENT_JSON}}

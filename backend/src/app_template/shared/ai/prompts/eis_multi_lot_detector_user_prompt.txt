@@ -1,0 +1,6 @@
+Analyze this procurement decision document and determine if it contains multiple lots/parts/regions.
+
+Document text:
+{{report_text}}
+
+Return JSON indicating whether this is multi-lot procurement, how many lots, and what evidence supports your conclusion.

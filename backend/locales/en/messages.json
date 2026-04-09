@@ -1,0 +1,20 @@
+{
+  "errors.internal": "Something went wrong. Please try again.",
+  "errors.http": "Request failed.",
+  "errors.validation": "Request validation failed.",
+  "errors.not_found": "The requested resource was not found.",
+  "auth.invalid_credentials": "Invalid email or password.",
+  "auth.email_already_exists": "An account with this email already exists.",
+  "auth.invalid_token": "Invalid token.",
+  "auth.user_not_found": "User not found.",
+  "chat.fallback.quick_reply_yes": "Yes",
+  "chat.fallback.quick_reply_no": "No",
+  "chat.fallback.quick_reply_not_sure": "Not sure",
+  "chat.fallback.quick_reply_other": "Other",
+  "chat.fallback.assistant_error": "Something went wrong. Please try again.",
+  "search.match.cpv": "CPV {value}",
+  "search.match.keywords": "keywords: {value}",
+  "search.match.region": "region {value}",
+  "search.match.prefix": "Matched by {parts}",
+  "search.match.all": "Matched all tenders"
+}

@@ -1,0 +1,42 @@
+Jūs klasificējat Latvijas iepirkumu ierakstus, kas jau ir atlasīti ar plašu CPV priekšfiltru. CPV ir tikai signāls, nevis galīgā patiesība.
+
+Atgrieziet stingru JSON objektu ar atslēgām:
+- domain
+- scope_type
+- work_type
+- asset_scale
+- llm_reason
+
+Atļautās vērtības:
+- domain: {{ALLOWED_DOMAINS}}
+- scope_type: {{ALLOWED_SCOPE_TYPES}}
+- work_type: {{ALLOWED_WORK_TYPES}}
+- asset_scale: {{ALLOWED_ASSET_SCALES}}
+
+Klasificēšanas kārtība:
+1. Nosakiet vai ieraksts ir par ēku, infrastruktūru, uzturēšanas/pakalpojuma darbu vai nav būvniecība.
+2. Nosakiet iepirkuma tvērumu: tikai projektēšana, projektēšana un būvdarbi kopā, tikai būvdarbi, tikai būvuzraudzība, tikai pakalpojums.
+3. Nosakiet darbu tipu: jaunbūve, renovācija, remonts, uzturēšana, tīrīšana vai unknown.
+4. asset_scale nosakiet tikai no teksta, ja vērtība nav skaidri zināma. Ja ierakstā ir estimated_value_eur, nespekulējiet un drīkstat atgriezt unknown.
+
+Definīcijas:
+- building: ēkas, telpas, skolas, slimnīcas, biroji, noliktavas un citi ēku objekti
+- infrastructure: ceļi, ielas, tilti, laukumi, inženiertīkli, cauruļvadi, ūdenssaimniecība, kanalizācija un līdzīgi lineāri vai ārējās infrastruktūras objekti
+- maintenance_service: uzturēšanas vai ekspluatācijas pakalpojumi, tai skaitā ceļu uzturēšana, tīrīšana, sniega izvešana, ikdienas apkope
+- non_construction: piegādes vai pakalpojumi, kas nav būvniecība, projektēšana, būvuzraudzība vai infrastruktūras uzturēšana
+
+Scope_type definīcijas:
+- design_only: tikai projektēšana, būvprojekts, tehniskais projekts, projektēšanas pakalpojumi
+- design_build: vienā iepirkumā ir gan projektēšana, gan būvdarbi
+- build_only: tikai būvdarbi, remonts vai renovācija
+- supervision_only: būvuzraudzība vai autoruzraudzība bez projektēšanas vai būvdarbiem
+- service_only: uzturēšanas, tīrīšanas vai ekspluatācijas pakalpojums
+
+Darbu tipu vadlīnijas:
+- new_build: jauna būvniecība vai jaunas infrastruktūras izbūve
+- renovation: pārbūve, atjaunošana, rekonstrukcija, modernizācija
+- repair: remonts, kapitālais remonts, lokāli atjaunošanas darbi
+- maintenance: uzturēšana, ikdienas ekspluatācija, sezonāli uzturēšanas darbi
+- cleaning: tīrīšana, uzkopšana, sniega tīrīšana, ceļu slaucīšana
+
+llm_reason jābūt īsam un konkrētam, 1-2 teikumiem.

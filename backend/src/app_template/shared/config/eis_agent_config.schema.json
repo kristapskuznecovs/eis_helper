@@ -1,0 +1,384 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.eis/config/agent_config.schema.json",
+  "title": "Universal Agent Runtime Config",
+  "type": "object",
+  "required": ["version"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "integer", "minimum": 1 },
+    "classification_agent": {
+      "anyOf": [
+        { "$ref": "#/$defs/AgentConfig" },
+        { "type": "string", "pattern": "^\\$ref:.+\\.json$" }
+      ]
+    },
+    "organizer_agent": {
+      "anyOf": [
+        { "$ref": "#/$defs/AgentConfig" },
+        { "type": "string", "pattern": "^\\$ref:.+\\.json$" }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "NullableString": {
+      "anyOf": [{ "type": "string" }, { "type": "null" }]
+    },
+    "StringArray": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "ObjectMap": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "JsonSchemaObject": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "AgentConfig": {
+      "type": "object",
+      "required": [
+        "name",
+        "enabled",
+        "mode",
+        "provider",
+        "workers",
+        "model",
+        "max_tokens",
+        "api",
+        "generation",
+        "output",
+        "tools",
+        "history",
+        "progress",
+        "prompts"
+      ],
+      "allOf": [
+        {
+          "required": ["openai"]
+        }
+      ],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "enabled": { "type": "boolean" },
+        "mode": {
+          "type": "string",
+          "enum": ["openai"]
+        },
+        "provider": {
+          "type": "string",
+          "enum": ["openai"]
+        },
+        "workers": { "type": "integer", "minimum": 1 },
+        "model": { "type": "string", "minLength": 1 },
+        "max_tokens": { "type": "integer", "minimum": 1 },
+        "api": {
+          "type": "object",
+          "required": [
+            "base_url",
+            "api_key_env",
+            "timeout_seconds",
+            "retries",
+            "retry_backoff_seconds"
+          ],
+          "properties": {
+            "base_url": { "type": "string", "minLength": 1 },
+            "api_key_env": { "type": "string", "minLength": 1 },
+            "timeout_seconds": { "type": "integer", "minimum": 1 },
+            "retries": { "type": "integer", "minimum": 1 },
+            "retry_backoff_seconds": { "type": "number", "minimum": 0 },
+            "organization": { "$ref": "#/$defs/NullableString" },
+            "project": { "$ref": "#/$defs/NullableString" },
+            "http_headers": { "$ref": "#/$defs/ObjectMap" },
+            "proxy": { "$ref": "#/$defs/NullableString" }
+          },
+          "additionalProperties": true
+        },
+        "generation": {
+          "type": "object",
+          "required": ["temperature", "top_p", "max_output_tokens"],
+          "properties": {
+            "temperature": { "type": "number", "minimum": 0, "maximum": 2 },
+            "top_p": { "type": "number", "minimum": 0, "maximum": 1 },
+            "top_k": { "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] },
+            "max_output_tokens": { "type": "integer", "minimum": 1 },
+            "max_completion_tokens": { "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] },
+            "candidate_count": { "type": "integer", "minimum": 1 },
+            "presence_penalty": { "type": "number" },
+            "frequency_penalty": { "type": "number" },
+            "repetition_penalty": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+            "seed": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+            "stop_sequences": { "$ref": "#/$defs/StringArray" },
+            "n": { "type": "integer", "minimum": 1 },
+            "best_of": { "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] },
+            "min_p": { "anyOf": [{ "type": "number", "minimum": 0, "maximum": 1 }, { "type": "null" }] },
+            "logprobs": { "type": "boolean" },
+            "top_logprobs": { "anyOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] }
+          },
+          "additionalProperties": true
+        },
+        "output": {
+          "type": "object",
+          "required": ["format", "schema"],
+          "properties": {
+            "format": {
+              "type": "string",
+              "enum": [
+                "json_object",
+                "json_schema",
+                "label_string",
+                "text",
+                "response_mime_type"
+              ]
+            },
+            "strict": { "type": "boolean" },
+            "json_schema_name": { "$ref": "#/$defs/NullableString" },
+            "response_mime_type": { "$ref": "#/$defs/NullableString" },
+            "schema": { "$ref": "#/$defs/JsonSchemaObject" }
+          },
+          "additionalProperties": true
+        },
+        "tools": {
+          "type": "object",
+          "required": ["allowed", "show_sources"],
+          "properties": {
+            "allowed": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "web_search",
+                  "browser",
+                  "file_search",
+                  "code_interpreter",
+                  "function_calling",
+                  "mcp",
+                  "none"
+                ]
+              }
+            },
+            "tool_choice": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": ["none", "auto", "required"]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              ]
+            },
+            "parallel_tool_calls": { "type": "boolean" },
+            "max_tool_calls": { "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] },
+            "show_sources": { "type": "boolean" }
+          },
+          "additionalProperties": true
+        },
+        "history": {
+          "type": "object",
+          "required": ["enabled", "path"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "path": { "type": "string", "minLength": 1 },
+            "store_raw_responses": { "type": "boolean" },
+            "redact_api_keys": { "type": "boolean" },
+            "max_entries": { "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] }
+          },
+          "additionalProperties": true
+        },
+        "progress": {
+          "type": "object",
+          "required": ["show_in_progress_messages", "classification_log_every_n", "scan_log_every_n"],
+          "properties": {
+            "show_in_progress_messages": { "type": "boolean" },
+            "classification_log_every_n": { "type": "integer", "minimum": 0 },
+            "scan_log_every_n": { "type": "integer", "minimum": 0 },
+            "emit_events": { "type": "boolean" }
+          },
+          "additionalProperties": true
+        },
+        "prompts": {
+          "type": "object",
+          "required": ["system_file", "user_file"],
+          "properties": {
+            "system_file": { "type": "string", "minLength": 1 },
+            "user_file": { "type": "string", "minLength": 1 },
+            "instructions_file": { "$ref": "#/$defs/NullableString" },
+            "few_shot_file": { "$ref": "#/$defs/NullableString" }
+          },
+          "additionalProperties": true
+        },
+        "openai": {
+          "type": "object",
+          "properties": {
+            "api_style": {
+              "type": "string",
+              "enum": ["responses", "chat_completions", "assistants"]
+            },
+            "response_api": {
+              "type": "object",
+              "properties": {
+                "store": { "type": "boolean" },
+                "include": { "$ref": "#/$defs/StringArray" },
+                "truncation": { "type": "string", "enum": ["auto", "disabled"] },
+                "previous_response_id": { "$ref": "#/$defs/NullableString" },
+                "reasoning": {
+                  "type": "object",
+                  "properties": {
+                    "effort": { "type": "string", "enum": ["low", "medium", "high"] },
+                    "summary": { "type": "string", "enum": ["auto", "detailed", "none"] }
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "additionalProperties": true
+            },
+            "chat_completions": {
+              "type": "object",
+              "properties": {
+                "service_tier": { "type": "string", "enum": ["auto", "default", "flex"] },
+                "logit_bias": { "$ref": "#/$defs/ObjectMap" },
+                "user": { "$ref": "#/$defs/NullableString" },
+                "stream": { "type": "boolean" },
+                "stream_options": { "$ref": "#/$defs/ObjectMap" },
+                "metadata": { "$ref": "#/$defs/ObjectMap" },
+                "audio": { "anyOf": [{ "type": "object" }, { "type": "null" }] },
+                "modalities": {
+                  "type": "array",
+                  "items": { "type": "string", "enum": ["text", "audio"] }
+                },
+                "prediction": { "anyOf": [{ "type": "object" }, { "type": "null" }] },
+                "parallel_tool_calls": { "type": "boolean" },
+                "tool_choice": {
+                  "anyOf": [
+                    { "type": "string", "enum": ["none", "auto", "required"] },
+                    { "type": "object", "additionalProperties": true }
+                  ]
+                },
+                "stop": {
+                  "anyOf": [
+                    { "type": "string" },
+                    { "$ref": "#/$defs/StringArray" },
+                    { "type": "null" }
+                  ]
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "gemini": {
+          "type": "object",
+          "properties": {
+            "api_style": { "type": "string", "enum": ["generateContent", "streamGenerateContent"] },
+            "http_options": {
+              "type": "object",
+              "properties": {
+                "api_version": { "type": "string", "enum": ["v1", "v1beta"] }
+              },
+              "additionalProperties": true
+            },
+            "generation_config": {
+              "type": "object",
+              "properties": {
+                "temperature": { "type": "number", "minimum": 0, "maximum": 2 },
+                "topP": { "type": "number", "minimum": 0, "maximum": 1 },
+                "topK": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+                "candidateCount": { "type": "integer", "minimum": 1 },
+                "maxOutputTokens": { "type": "integer", "minimum": 1 },
+                "stopSequences": { "$ref": "#/$defs/StringArray" },
+                "presencePenalty": { "type": "number" },
+                "frequencyPenalty": { "type": "number" },
+                "seed": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+                "responseMimeType": { "$ref": "#/$defs/NullableString" },
+                "responseSchema": { "anyOf": [{ "type": "object" }, { "type": "null" }] },
+                "responseLogprobs": { "type": "boolean" },
+                "logprobs": { "anyOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] },
+                "audioTimestamp": { "type": "boolean" },
+                "thinkingConfig": {
+                  "type": "object",
+                  "properties": {
+                    "thinkingBudget": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+                    "includeThoughts": { "type": "boolean" }
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "additionalProperties": true
+            },
+            "safety_settings": {
+              "type": "array",
+              "items": { "type": "object", "additionalProperties": true }
+            },
+            "tools": {
+              "type": "array",
+              "items": { "type": "object", "additionalProperties": true }
+            },
+            "tool_config": { "anyOf": [{ "type": "object" }, { "type": "null" }] },
+            "system_instruction": { "$ref": "#/$defs/NullableString" },
+            "cached_content": { "$ref": "#/$defs/NullableString" },
+            "labels": { "$ref": "#/$defs/ObjectMap" }
+          },
+          "additionalProperties": true
+        },
+        "claude": {
+          "type": "object",
+          "properties": {
+            "api_style": { "type": "string", "enum": ["messages", "messages_stream"] },
+            "anthropic_version": { "type": "string" },
+            "anthropic_beta": { "$ref": "#/$defs/StringArray" },
+            "service_tier": { "type": "string", "enum": ["auto", "standard_only"] },
+            "messages": {
+              "type": "object",
+              "properties": {
+                "stream": { "type": "boolean" },
+                "metadata": { "$ref": "#/$defs/ObjectMap" },
+                "system": {
+                  "anyOf": [
+                    { "type": "string" },
+                    { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+                    { "type": "null" }
+                  ]
+                },
+                "stop_sequences": { "$ref": "#/$defs/StringArray" },
+                "top_k": { "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] },
+                "tool_choice": {
+                  "anyOf": [
+                    { "type": "string", "enum": ["auto", "any", "tool", "none"] },
+                    { "type": "object", "additionalProperties": true }
+                  ]
+                },
+                "tools": {
+                  "type": "array",
+                  "items": { "type": "object", "additionalProperties": true }
+                },
+                "thinking": {
+                  "type": "object",
+                  "properties": {
+                    "type": { "type": "string", "enum": ["enabled", "disabled"] },
+                    "budget_tokens": { "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] }
+                  },
+                  "additionalProperties": true
+                },
+                "container": { "$ref": "#/$defs/NullableString" },
+                "context_management": { "anyOf": [{ "type": "object" }, { "type": "null" }] },
+                "mcp_servers": {
+                  "type": "array",
+                  "items": { "type": "object", "additionalProperties": true }
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

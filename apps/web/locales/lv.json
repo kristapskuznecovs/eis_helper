@@ -1,0 +1,274 @@
+{
+  "meta": {
+    "title": "EIS Iepirkumi",
+    "description": "Atrodi atbilstošus iepirkumus EIS sistēmā"
+  },
+  "common": {
+    "retry": "Mēģināt vēlreiz",
+    "reset": "Notīrīt",
+    "loading": "Ielādē...",
+    "updating": "Atjaunina...",
+    "noData": "Nav datu",
+    "any": "Jebkurš",
+    "all": "Visi",
+    "notSelected": "Izvēlies",
+    "backToSearch": "Atpakaļ uz meklēšanu",
+    "search": "Meklēt",
+    "remove": "Noņemt",
+    "openInEis": "Atvērt EIS",
+    "language": {
+      "label": "Valoda",
+      "lv": "LV",
+      "en": "EN"
+    }
+  },
+  "nav": {
+    "tenders": "Iepirkumi",
+    "dashboard": "Analītika",
+    "dashboardSqlite": "SQLite analītika",
+    "dashboardCkan": "CKAN analītika",
+    "bookmarks": "Iepirkumi",
+    "overview": "Vispārīgais skats",
+    "company": "GC uzņēmuma skats",
+    "purchaser": "Pasūtītāja skats",
+    "risk": "Riska skats",
+    "my": "Profils"
+  },
+  "search": {
+    "title": "Atrodi EIS iepirkumus",
+    "subtitle": "Apraksti savu uzņēmumu un atrodi atbilstošus publiskos iepirkumus.",
+    "subtitleExtra": "Sāc ar vienkāršu meklēšanu vai atver paplašinātos filtrus precizitātei.",
+    "navTitle": "EIS Iepirkumi",
+    "describeLabel": "Apraksti savu uzņēmumu vai pakalpojumu",
+    "placeholderDefault": "Turpini sarunu...",
+    "enterHint": "Enter nosūta · Shift+Enter jaunai rindai",
+    "loadError": "Neizdevās ielādēt iepirkumus. Lūdzu, mēģiniet vēlreiz.",
+    "assistantError": "Kaut kas nogāja greizi. Lūdzu, mēģiniet vēlreiz.",
+    "searching": "Meklē iepirkumus...",
+    "resultsFound": "Atrasti {count} iepirkumi",
+    "noResults": "Pēc šiem filtriem iepirkumi netika atrasti",
+    "suggestions": {
+      "remove_region": "Noņemt reģionu",
+      "broaden_category": "Paplašināt kategoriju",
+      "keywords_only": "Izmantot tikai atslēgvārdus",
+      "open_advanced": "Atvērt paplašinātos filtrus"
+    },
+    "match": "Atbilstība: {reason}",
+    "advanced": {
+      "show": "Precizēt manuāli",
+      "hide": "Paslēpt filtrus",
+      "title": "Filtri",
+      "resetAll": "Notīrīt visu",
+      "keywords": "Atslēgvārdi",
+      "keywordsPlaceholder": "piem. C++, SAP, renovācija",
+      "category": "Kategorija",
+      "region": "Reģions",
+      "status": "Statuss",
+      "subjectType": "Priekšmeta veids",
+      "cpvPrefix": "CPV prefikss",
+      "cpvPrefixPlaceholder": "piem. 45, 72",
+      "similarCompany": "Līdzīgs uzņēmums",
+      "similarCompanyHint": "(atrod tā CPV kategorijas)",
+      "similarCompanyPlaceholder": "piem. RBS, Accenture Latvia, SSE Riga",
+      "findCpvs": "Atrast CPV",
+      "basedOn": "Balstīts uz: {value}",
+      "minValue": "Min. vērtība (EUR)",
+      "maxValue": "Maks. vērtība (EUR)",
+      "deadlineWithin": "Termiņš",
+      "sortBy": "Kārtot pēc",
+      "submit": "Meklēt ar šiem filtriem"
+    },
+    "filters": {
+      "keywords": "Atslēgvārdi",
+      "category": "Kategorija",
+      "cpv_code": "CPV kods",
+      "planning_region": "Reģions",
+      "status": "Statuss",
+      "procedure_type": "Procedūras veids",
+      "subject_type": "Priekšmeta veids",
+      "cpv_prefixes": "CPV",
+      "value_min_eur": "Min. vērtība",
+      "value_max_eur": "Maks. vērtība",
+      "deadline_days": "Termiņš",
+      "sort": "Kārtošana",
+      "similar_companies": "Līdzīgi uzņēmumi",
+      "similar_company_cpv_prefixes": "Līdzīgo uzņēmumu CPV",
+      "buyer": "Pasūtītājs"
+    },
+    "categories": {
+      "construction": "Būvniecība",
+      "it": "IT un programmatūra",
+      "consulting": "Konsultācijas",
+      "training": "Apmācības",
+      "engineering": "Inženierija",
+      "healthcare": "Veselības aprūpe",
+      "supplies": "Piegādes"
+    },
+    "regions": {
+      "all_latvia": "Visa Latvija",
+      "Rīga": "Rīga",
+      "Pierīga": "Pierīga",
+      "Vidzeme": "Vidzeme",
+      "Kurzeme": "Kurzeme",
+      "Zemgale": "Zemgale",
+      "Latgale": "Latgale"
+    },
+    "statuses": {
+      "open": "Atvērti",
+      "closed": "Slēgti",
+      "all": "Visi"
+    },
+    "subjectTypes": {
+      "works": "Būvdarbi",
+      "services": "Pakalpojumi",
+      "supplies": "Piegādes"
+    },
+    "deadlines": {
+      "14": "2 nedēļas",
+      "30": "1 mēnesis",
+      "90": "3 mēneši",
+      "any": "Jebkurš laiks"
+    },
+    "sort": {
+      "relevance": "Atbilstība",
+      "date_desc": "Jaunākie vispirms",
+      "deadline": "Tuvākais termiņš",
+      "value_desc": "Lielākā vērtība"
+    },
+    "placeholders": {
+      "construction1": "Būvniecības uzņēmums Rīgā",
+      "training": "Apmācību pakalpojumi skolām",
+      "renovation": "Renovācijas darbi pašvaldībām",
+      "engineering": "Inženieruzraudzība sabiedriskām ēkām"
+    },
+    "bookmarks": {
+      "add": "Saglabāt",
+      "remove": "Noņemt saglabāto"
+    }
+  },
+  "bookmarks": {
+    "title": "Saglabātie iepirkumi",
+    "subtitle": "Glabājas lokāli tavā pārlūkā, konts nav nepieciešams.",
+    "empty": "Vēl nav saglabātu iepirkumu",
+    "clearAll": "Notīrīt visu",
+    "searchTenders": "Meklēt iepirkumus",
+    "count": "{count} saglabāti iepirkumi"
+  },
+  "dashboard": {
+    "header": "Būvniecības iepirkumu analītika",
+    "headerCkan": "Iepirkumu analītika - CKAN dati",
+    "sqliteLink": "SQLite analītika",
+    "loading": "Ielādē...",
+    "updating": "Atjaunina...",
+    "selectCompany": "Izvēlies uzņēmumu",
+    "selectPurchaser": "Izvēlies pasūtītāju",
+    "filters": {
+      "year": "Gads",
+      "region": "Reģions",
+      "category": "Kategorija",
+      "multiLot": "Vairāku daļu",
+      "all": "Visi",
+      "allFem": "Visas",
+      "withLots": "Tikai ar daļām",
+      "withoutLots": "Tikai bez daļām",
+      "company": "Uzņēmums",
+      "companyPlaceholder": "Meklē uzņēmumu...",
+      "companyNoMatches": "Nav atrastas atbilsmes",
+      "companySelected": "Izvēlēts: {value}",
+      "purchaser": "Pasūtītājs"
+    },
+    "statLabels": {
+      "projects": "Projekti",
+      "totalAwarded": "Kopā līgumcena",
+      "winners": "Uzvarētāji",
+      "buyers": "Pasūtītāji",
+      "averageBidders": "Vid. pretendenti",
+      "singleBidder": "1 pretendents",
+      "multiLot": "Vairāku daļu",
+      "top5Share": "Top 5 tirgus daļa"
+    },
+    "tableLabels": {
+      "amount": "Summa",
+      "projectShort": "proj.",
+      "applicationsShort": "pieteik.",
+      "winsShort": "uzv.",
+      "riskyShort": "riskanti",
+      "closeShort": "tuvu",
+      "togetherShort": "kopā",
+      "lowestPrice": "zemākā cena",
+      "missing": "trūkst"
+    }
+  },
+  "my": {
+    "title": "Profils",
+    "back": "← Meklēšana",
+    "tabs": {
+      "profile": "Profils",
+      "activity": "Aktivitāte",
+      "filters": "Saglabātie filtri",
+      "bookmarks": "Iepirkumi"
+    },
+    "profile": {
+      "heading": "Mans uzņēmums",
+      "description": "Norādiet uzņēmuma nosaukumu, lai skatītu iepriekšējo iepirkumu aktivitāti un personalizētu meklēšanu.",
+      "label": "Uzņēmuma nosaukums",
+      "placeholder": "piemēram, SSE Rīga, RBS, Accenture Latvia",
+      "verify": "Pārbaudīt",
+      "checking": "Pārbauda...",
+      "save": "Saglabāt",
+      "found": "✓ Atrasti {count} ieraksti — uzņēmums EIS datos eksistē",
+      "notFound": "Ieraksti nav atrasti — pārbaudiet rakstību vai izmēģiniet īsāku nosaukumu",
+      "currentlySet": "Pašreiz iestatīts",
+      "viewActivity": "Skatīt aktivitāti"
+    },
+    "activity": {
+      "heading": "Mana aktivitāte",
+      "description": "Iepriekšējā dalība un uzvarētie iepirkumi no EIS CKAN datiem.",
+      "noCompany": "Norādiet uzņēmuma nosaukumu <link>Profila cilnē</link>, lai skatītu aktivitāti.",
+      "profileTab": "Profila cilnē",
+      "loading": "Ielādē aktivitāti uzņēmumam {company}…",
+      "error": "Neizdevās ielādēt aktivitātes datus.",
+      "wins": "Jaunākās uzvaras",
+      "participations": "Jaunākā dalība",
+      "noWins": "Uzvaras nav atrastas.",
+      "noParticipations": "Dalība nav atrasta.",
+      "stats": {
+        "participated": "Dalība",
+        "won": "Uzvarēts",
+        "winRate": "Uzvaras %",
+        "totalWon": "Kopā uzvarēts"
+      },
+      "card": {
+        "signed": "Parakstīts",
+        "deadline": "Termiņš"
+      }
+    },
+    "filters": {
+      "heading": "Saglabātie filtri",
+      "description": "Palaidiet vai rediģējiet saglabātās meklēšanas. Jaunus var izveidot meklēšanas lapā.",
+      "empty": "Saglabātu filtru nav.",
+      "goToSearch": "Iet uz meklēšanu, lai saglabātu filtru",
+      "savedOn": "Saglabāts {date}",
+      "run": "Palaist",
+      "runTitle": "Palaist šo filtru",
+      "editTitle": "Rediģēt šo filtru",
+      "deleteTitle": "Dzēst šo filtru",
+      "savePrompt": "Nosauciet šo filtru",
+      "savePlaceholder": "piemēram, Izglītība Rīga €50k+",
+      "save": "Saglabāt",
+      "cancel": "Atcelt",
+      "saveThisSearch": "Saglabāt šo meklēšanu",
+      "saved": "✓ Saglabāts!"
+    },
+    "bookmarks": {
+      "heading": "Saglabātie iepirkumi",
+      "description": "Iepirkumi, kurus saglabājāt vēlākai skatīšanai.",
+      "viewAll": "Skatīt visus {count} saglabātos",
+      "findTenders": "Atrodiet iepirkumus, ko saglabāt",
+      "clearAll": "Notīrīt visu",
+      "empty": "Vēl nav saglabātu grāmatzīmju."
+    },
+    "searchingAs": "Meklēju kā {company}",
+    "myWorkspace": "Mans darbs →"
+  }
+}

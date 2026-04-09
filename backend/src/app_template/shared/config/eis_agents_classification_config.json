@@ -1,0 +1,149 @@
+{
+  "$schema": "../../providers/openai_agent.schema.json",
+  "name": "classification_agent",
+  "description": "Classifies Latvian CPV-filtered procurements into structured project categories.",
+  "enabled": true,
+  "mode": "openai",
+  "provider": "openai",
+  "workers": 4,
+  "model": "gpt-4.1-mini",
+  "max_tokens": 300,
+  "api": {
+    "base_url": "https://api.openai.com/v1",
+    "api_key_env": "OPENAI_API_KEY",
+    "timeout_seconds": 60,
+    "retries": 3,
+    "retry_backoff_seconds": 1.5,
+    "organization": null,
+    "project": null,
+    "http_headers": {},
+    "proxy": null
+  },
+  "generation": {
+    "temperature": 0,
+    "top_p": 1,
+    "top_k": null,
+    "max_output_tokens": 300,
+    "max_completion_tokens": 300,
+    "candidate_count": 1,
+    "presence_penalty": 0,
+    "frequency_penalty": 0,
+    "repetition_penalty": null,
+    "seed": null,
+    "stop_sequences": [],
+    "n": 1,
+    "best_of": null,
+    "min_p": null,
+    "logprobs": false,
+    "top_logprobs": null
+  },
+  "output": {
+    "format": "json_object",
+    "strict": false,
+    "json_schema_name": "classification_output",
+    "response_mime_type": "application/json",
+    "schema": {
+      "type": "object",
+      "required": ["domain", "scope_type", "work_type", "asset_scale", "llm_reason"],
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": [
+            "building",
+            "infrastructure",
+            "maintenance_service",
+            "non_construction",
+            "unknown"
+          ]
+        },
+        "scope_type": {
+          "type": "string",
+          "enum": [
+            "design_only",
+            "design_build",
+            "build_only",
+            "supervision_only",
+            "service_only",
+            "unknown"
+          ]
+        },
+        "work_type": {
+          "type": "string",
+          "enum": [
+            "new_build",
+            "renovation",
+            "repair",
+            "maintenance",
+            "cleaning",
+            "unknown"
+          ]
+        },
+        "asset_scale": {
+          "type": "string",
+          "enum": [
+            "large",
+            "small",
+            "unknown"
+          ]
+        },
+        "llm_reason": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "tools": {
+    "allowed": ["web_search", "file_search"],
+    "tool_choice": "auto",
+    "parallel_tool_calls": true,
+    "max_tool_calls": null,
+    "show_sources": true
+  },
+  "history": {
+    "enabled": false,
+    "path": "data/agent_history/classification_agent_history.jsonl",
+    "store_raw_responses": false,
+    "redact_api_keys": true,
+    "max_entries": 1000
+  },
+  "progress": {
+    "show_in_progress_messages": true,
+    "classification_log_every_n": 200,
+    "scan_log_every_n": 250,
+    "emit_events": true
+  },
+  "prompts": {
+    "system_file": "config/agents/classification/system_prompt.txt",
+    "user_file": "config/agents/classification/user_prompt.txt",
+    "instructions_file": null,
+    "few_shot_file": null
+  },
+  "openai": {
+    "api_style": "chat_completions",
+    "response_api": {
+      "store": false,
+      "include": [],
+      "truncation": "disabled",
+      "previous_response_id": null,
+      "reasoning": {
+        "effort": "medium",
+        "summary": "auto"
+      }
+    },
+    "chat_completions": {
+      "service_tier": "auto",
+      "logit_bias": {},
+      "user": null,
+      "stream": false,
+      "stream_options": {
+        "include_usage": true
+      },
+      "metadata": {},
+      "audio": null,
+      "modalities": ["text"],
+      "prediction": null,
+      "parallel_tool_calls": true,
+      "tool_choice": "auto"
+    }
+  }
+}

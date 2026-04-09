@@ -1,0 +1,224 @@
+{
+  "$schema": "../../providers/openai_agent.schema.json",
+  "name": "outcome_extractor",
+  "description": "Extracts procurement winner and participant data from final report documents.",
+  "enabled": true,
+  "mode": "extraction",
+  "provider": "openai",
+  "workers": 4,
+  "model": "gpt-4o-mini",
+  "max_tokens": 4000,
+  "api": {
+    "base_url": "https://api.openai.com/v1",
+    "api_key_env": "OPENAI_API_KEY",
+    "timeout_seconds": 120,
+    "retries": 3,
+    "retry_backoff_seconds": 1.5,
+    "organization": null,
+    "project": null,
+    "http_headers": {},
+    "proxy": null
+  },
+  "generation": {
+    "temperature": 0,
+    "top_p": 1,
+    "top_k": null,
+    "max_output_tokens": 4000,
+    "max_completion_tokens": 4000,
+    "candidate_count": 1,
+    "presence_penalty": 0,
+    "frequency_penalty": 0,
+    "repetition_penalty": null,
+    "seed": null,
+    "stop_sequences": [],
+    "n": 1,
+    "best_of": null,
+    "min_p": null,
+    "logprobs": false,
+    "top_logprobs": null
+  },
+  "output": {
+    "format": "json_object",
+    "strict": false,
+    "json_schema_name": "outcome_extraction",
+    "response_mime_type": "application/json",
+    "schema": {
+      "type": "object",
+      "required": ["procurement_status", "winner_name", "participants", "confidence", "notes"],
+      "properties": {
+        "procurement_status": {
+          "type": "string",
+          "enum": ["completed", "cancelled", "terminated", "no_applications", "pre_consultation", "unknown"],
+          "description": "Status of the procurement procedure"
+        },
+        "winner_name": {
+          "type": ["string", "null"],
+          "description": "Name of the procurement winner (null if not completed or no winner)"
+        },
+        "winner_registration_no": {
+          "type": ["string", "null"],
+          "description": "Registration number of winner"
+        },
+        "winner_price_eur": {
+          "type": ["number", "null"],
+          "description": "Winner's contract price in EUR"
+        },
+        "participants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Participant or consortium name"
+              },
+              "registration_no": {
+                "type": ["string", "null"],
+                "description": "Registration number"
+              },
+              "suggested_price_eur": {
+                "type": ["number", "null"],
+                "description": "Suggested price in EUR"
+              },
+              "consortium_members": {
+                "type": ["array", "null"],
+                "items": {
+                  "type": "string"
+                },
+                "description": "List of consortium member company names if this is a group/consortium"
+              },
+              "disqualified": {
+                "type": "boolean",
+                "description": "Whether this participant was disqualified/rejected"
+              },
+              "disqualification_reason": {
+                "type": ["string", "null"],
+                "description": "Reason for disqualification if applicable"
+              },
+              "lot_number": {
+                "type": ["integer", "null"],
+                "description": "Lot/part number if multi-lot procurement (1, 2, 3, etc.)"
+              },
+              "won_lot": {
+                "type": ["boolean", "null"],
+                "description": "Whether this participant won this specific lot (for multi-lot procurements)"
+              }
+            }
+          }
+        },
+        "is_multi_lot": {
+          "type": "boolean",
+          "description": "Whether this procurement has multiple lots/parts"
+        },
+        "lot_count": {
+          "type": ["integer", "null"],
+          "description": "Number of lots/parts in multi-lot procurement"
+        },
+        "bid_deadline": {
+          "type": ["string", "null"],
+          "description": "Bid submission deadline date and time (ISO format or Latvian format)"
+        },
+        "decision_date": {
+          "type": ["string", "null"],
+          "description": "Date when procurement decision was made"
+        },
+        "funding_source": {
+          "type": ["string", "null"],
+          "description": "Primary funding source: ERAF, municipal, national, or mixed"
+        },
+        "eu_project_reference": {
+          "type": ["string", "null"],
+          "description": "EU project reference number if EU-funded"
+        },
+        "evaluation_method": {
+          "type": ["string", "null"],
+          "description": "Evaluation method: lowest_price or best_value"
+        },
+        "contract_scope_type": {
+          "type": ["string", "null"],
+          "enum": ["design", "construction_new", "construction_renovation", "construction_repair", "supervision_construction", "design_build", "maintenance", "construction_other", "mixed", "unknown", null],
+          "description": "Contract scope type classification"
+        },
+        "subcontractors": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "string"
+          },
+          "description": "List of subcontractor names if mentioned"
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "description": "Extraction confidence level"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Any relevant notes about the extraction"
+        }
+      }
+    }
+  },
+  "tools": {
+    "allowed": [],
+    "tool_choice": "none",
+    "parallel_tool_calls": false,
+    "max_tool_calls": null,
+    "show_sources": false
+  },
+  "history": {
+    "enabled": false,
+    "path": "data/agent_history/outcome_extractor_history.jsonl",
+    "store_raw_responses": false,
+    "redact_api_keys": true,
+    "max_entries": 1000
+  },
+  "progress": {
+    "show_in_progress_messages": true,
+    "extraction_log_every_n": 50,
+    "emit_events": true
+  },
+  "prompts": {
+    "system_file": "config/agents/outcome_extractor/system_prompt.txt",
+    "user_file": "config/agents/outcome_extractor/user_prompt.txt",
+    "vision_system_file": "config/agents/outcome_extractor/vision_system_prompt.txt",
+    "vision_user_file": "config/agents/outcome_extractor/vision_user_prompt.txt",
+    "instructions_file": null,
+    "few_shot_file": null
+  },
+  "extraction": {
+    "text_limit": 50000,
+    "vision_max_pages": 10,
+    "vision_dpi": 200,
+    "vision_model": "gpt-4o",
+    "min_text_chars_for_text_extraction": 100
+  },
+  "openai": {
+    "api_style": "chat_completions",
+    "response_api": {
+      "store": false,
+      "include": [],
+      "truncation": "disabled",
+      "previous_response_id": null,
+      "reasoning": {
+        "effort": "medium",
+        "summary": "auto"
+      }
+    },
+    "chat_completions": {
+      "service_tier": "auto",
+      "logit_bias": {},
+      "user": null,
+      "stream": false,
+      "stream_options": {
+        "include_usage": true
+      },
+      "metadata": {},
+      "audio": null,
+      "modalities": ["text"],
+      "prediction": null,
+      "parallel_tool_calls": false,
+      "tool_choice": "none"
+    }
+  }
+}

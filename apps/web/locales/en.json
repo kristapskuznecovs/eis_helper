@@ -1,0 +1,274 @@
+{
+  "meta": {
+    "title": "EIS Tenders",
+    "description": "Find relevant public tenders from EIS"
+  },
+  "common": {
+    "retry": "Retry",
+    "reset": "Reset",
+    "loading": "Loading...",
+    "updating": "Refreshing...",
+    "noData": "No data",
+    "any": "Any",
+    "all": "All",
+    "notSelected": "Select",
+    "backToSearch": "Back to search",
+    "search": "Search",
+    "remove": "Remove",
+    "openInEis": "View on EIS",
+    "language": {
+      "label": "Language",
+      "lv": "LV",
+      "en": "EN"
+    }
+  },
+  "nav": {
+    "tenders": "Tenders",
+    "dashboard": "Dashboard",
+    "dashboardSqlite": "SQLite dashboard",
+    "dashboardCkan": "CKAN dashboard",
+    "bookmarks": "Saved",
+    "overview": "Overview",
+    "company": "GC company view",
+    "purchaser": "Purchaser view",
+    "risk": "Risk view",
+    "my": "My"
+  },
+  "search": {
+    "title": "Find EIS Tenders",
+    "subtitle": "Describe your business and discover relevant public tenders.",
+    "subtitleExtra": "Use simple search to start, or open advanced filters for precision.",
+    "navTitle": "EIS Tenders",
+    "describeLabel": "Describe your company or service",
+    "placeholderDefault": "Continue the conversation...",
+    "enterHint": "Press Enter to send · Shift+Enter for new line",
+    "loadError": "Could not load tenders. Please try again.",
+    "assistantError": "Something went wrong. Please try again.",
+    "searching": "Searching tenders...",
+    "resultsFound": "{count} tenders found",
+    "noResults": "No tenders found for these filters",
+    "suggestions": {
+      "remove_region": "Remove region",
+      "broaden_category": "Broaden category",
+      "keywords_only": "Use only keywords",
+      "open_advanced": "Open advanced filters"
+    },
+    "match": "Match: {reason}",
+    "advanced": {
+      "show": "Refine manually",
+      "hide": "Hide filters",
+      "title": "Filters",
+      "resetAll": "Reset all",
+      "keywords": "Keywords",
+      "keywordsPlaceholder": "e.g. C++, SAP, renovation",
+      "category": "Category",
+      "region": "Region",
+      "status": "Status",
+      "subjectType": "Subject type",
+      "cpvPrefix": "CPV prefix",
+      "cpvPrefixPlaceholder": "e.g. 45, 72",
+      "similarCompany": "Similar company",
+      "similarCompanyHint": "(finds their CPV categories)",
+      "similarCompanyPlaceholder": "e.g. RBS, Accenture Latvia, SSE Riga",
+      "findCpvs": "Find CPVs",
+      "basedOn": "Based on: {value}",
+      "minValue": "Min value (EUR)",
+      "maxValue": "Max value (EUR)",
+      "deadlineWithin": "Deadline within",
+      "sortBy": "Sort by",
+      "submit": "Search with these filters"
+    },
+    "filters": {
+      "keywords": "Keywords",
+      "category": "Category",
+      "cpv_code": "CPV code",
+      "planning_region": "Region",
+      "status": "Status",
+      "procedure_type": "Procedure type",
+      "subject_type": "Subject type",
+      "cpv_prefixes": "CPV",
+      "value_min_eur": "Min value",
+      "value_max_eur": "Max value",
+      "deadline_days": "Deadline",
+      "sort": "Sort",
+      "similar_companies": "Similar companies",
+      "similar_company_cpv_prefixes": "Similar company CPVs",
+      "buyer": "Buyer"
+    },
+    "categories": {
+      "construction": "Construction",
+      "it": "IT & Software",
+      "consulting": "Consulting",
+      "training": "Training",
+      "engineering": "Engineering",
+      "healthcare": "Healthcare",
+      "supplies": "Supplies"
+    },
+    "regions": {
+      "all_latvia": "All Latvia",
+      "Rīga": "Riga",
+      "Pierīga": "Pieriga",
+      "Vidzeme": "Vidzeme",
+      "Kurzeme": "Kurzeme",
+      "Zemgale": "Zemgale",
+      "Latgale": "Latgale"
+    },
+    "statuses": {
+      "open": "Open",
+      "closed": "Closed",
+      "all": "All"
+    },
+    "subjectTypes": {
+      "works": "Works",
+      "services": "Services",
+      "supplies": "Supplies"
+    },
+    "deadlines": {
+      "14": "2 weeks",
+      "30": "1 month",
+      "90": "3 months",
+      "any": "Any time"
+    },
+    "sort": {
+      "relevance": "Relevance",
+      "date_desc": "Newest first",
+      "deadline": "Deadline soonest",
+      "value_desc": "Highest value"
+    },
+    "placeholders": {
+      "construction1": "Construction company in Riga",
+      "training": "Training services for schools",
+      "renovation": "Renovation works for municipalities",
+      "engineering": "Engineering supervision for public buildings"
+    },
+    "bookmarks": {
+      "add": "Bookmark",
+      "remove": "Remove bookmark"
+    }
+  },
+  "bookmarks": {
+    "title": "Saved Tenders",
+    "subtitle": "Stored locally in your browser, no account needed.",
+    "empty": "No saved tenders yet",
+    "clearAll": "Clear all",
+    "searchTenders": "Search tenders",
+    "count": "{count} saved tenders"
+  },
+  "dashboard": {
+    "header": "Construction procurement dashboard",
+    "headerCkan": "Procurement dashboard - CKAN data",
+    "sqliteLink": "SQLite dashboard",
+    "loading": "Loading...",
+    "updating": "Refreshing...",
+    "selectCompany": "Select a company",
+    "selectPurchaser": "Select a purchaser",
+    "filters": {
+      "year": "Year",
+      "region": "Region",
+      "category": "Category",
+      "multiLot": "Multi-lot",
+      "all": "All",
+      "allFem": "All",
+      "withLots": "Only with lots",
+      "withoutLots": "Only without lots",
+      "company": "Company",
+      "companyPlaceholder": "Search company...",
+      "companyNoMatches": "No matches found",
+      "companySelected": "Selected: {value}",
+      "purchaser": "Purchaser"
+    },
+    "statLabels": {
+      "projects": "Projects",
+      "totalAwarded": "Total awarded value",
+      "winners": "Winners",
+      "buyers": "Buyers",
+      "averageBidders": "Avg. bidders",
+      "singleBidder": "1 bidder",
+      "multiLot": "Multi-lot",
+      "top5Share": "Top 5 market share"
+    },
+    "tableLabels": {
+      "amount": "Amount",
+      "projectShort": "proj.",
+      "applicationsShort": "applications",
+      "winsShort": "wins",
+      "riskyShort": "risky",
+      "closeShort": "close",
+      "togetherShort": "total",
+      "lowestPrice": "lowest price",
+      "missing": "missing"
+    }
+  },
+  "my": {
+    "title": "My Workspace",
+    "back": "← Search",
+    "tabs": {
+      "profile": "Profile",
+      "activity": "Activity",
+      "filters": "Saved Filters",
+      "bookmarks": "Bookmarks"
+    },
+    "profile": {
+      "heading": "My Company",
+      "description": "Set your company name to see your past tender activity and personalise your search.",
+      "label": "Company name",
+      "placeholder": "e.g. SSE Riga, RBS, Accenture Latvia",
+      "verify": "Verify",
+      "checking": "Checking...",
+      "save": "Save",
+      "found": "✓ Found {count} records — company exists in EIS data",
+      "notFound": "No records found — check spelling or try a shorter name",
+      "currentlySet": "Currently set to",
+      "viewActivity": "View activity"
+    },
+    "activity": {
+      "heading": "My Activity",
+      "description": "Past participations and wins from EIS CKAN data.",
+      "noCompany": "Set your company name in the <link>Profile tab</link> to see your activity.",
+      "profileTab": "Profile tab",
+      "loading": "Loading activity for {company}…",
+      "error": "Could not load activity data.",
+      "wins": "Recent Wins",
+      "participations": "Recent Participations",
+      "noWins": "No wins found.",
+      "noParticipations": "No participations found.",
+      "stats": {
+        "participated": "Participated",
+        "won": "Won",
+        "winRate": "Win rate",
+        "totalWon": "Total won"
+      },
+      "card": {
+        "signed": "Signed",
+        "deadline": "Deadline"
+      }
+    },
+    "filters": {
+      "heading": "Saved Filters",
+      "description": "Run or edit saved searches. Create new ones from the search page.",
+      "empty": "No saved filters yet.",
+      "goToSearch": "Go to search to save a filter",
+      "savedOn": "Saved {date}",
+      "run": "Run",
+      "runTitle": "Run this filter",
+      "editTitle": "Edit this filter",
+      "deleteTitle": "Delete this filter",
+      "savePrompt": "Name this filter",
+      "savePlaceholder": "e.g. Education Riga €50k+",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saveThisSearch": "Save this search",
+      "saved": "✓ Saved!"
+    },
+    "bookmarks": {
+      "heading": "Bookmarks",
+      "description": "Tenders you saved for later.",
+      "viewAll": "View all {count} bookmarks",
+      "findTenders": "Find tenders to bookmark",
+      "clearAll": "Clear all",
+      "empty": "No bookmarks yet."
+    },
+    "searchingAs": "Searching as {company}",
+    "myWorkspace": "My Workspace →"
+  }
+}

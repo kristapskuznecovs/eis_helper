@@ -1,0 +1,40 @@
+{
+  "agent_type": "multi_lot_detector",
+  "model": "claude-3-haiku-20240307",
+  "temperature": 0.0,
+  "response_format": {
+    "type": "json_schema",
+    "json_schema": {
+      "name": "multi_lot_detection",
+      "strict": true,
+      "schema": {
+        "type": "object",
+        "properties": {
+          "is_multi_lot": {
+            "type": "boolean",
+            "description": "Whether this procurement is split into multiple lots/parts/regions"
+          },
+          "lot_count": {
+            "type": ["integer", "null"],
+            "description": "Number of lots/parts/regions if multi-lot, null otherwise"
+          },
+          "lot_terminology": {
+            "type": ["string", "null"],
+            "description": "What terminology is used for lots: 'daļa', 'reģions', 'objekts', 'teritorija', etc."
+          },
+          "confidence": {
+            "type": "string",
+            "enum": ["high", "medium", "low"],
+            "description": "Confidence level in the detection"
+          },
+          "evidence": {
+            "type": ["string", "null"],
+            "description": "Brief quote or description of what indicates multi-lot structure"
+          }
+        },
+        "required": ["is_multi_lot", "lot_count", "lot_terminology", "confidence", "evidence"],
+        "additionalProperties": false
+      }
+    }
+  }
+}

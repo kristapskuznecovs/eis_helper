@@ -1,0 +1,280 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.eis/config/providers/claude_agent.schema.json",
+  "title": "Claude (Anthropic) Agent Configuration Schema",
+  "description": "Complete schema for Claude Messages API configuration",
+  "type": "object",
+  "required": ["provider", "model", "max_tokens", "claude"],
+  "properties": {
+    "provider": {
+      "type": "string",
+      "const": "claude",
+      "description": "Provider identifier - must be 'claude'"
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Claude model identifier",
+      "examples": [
+        "claude-opus-4-6",
+        "claude-opus-4-5-20251101",
+        "claude-3-7-sonnet-20250219",
+        "claude-3-5-sonnet-20241022",
+        "claude-3-5-haiku-20241022"
+      ]
+    },
+    "max_tokens": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum number of tokens to generate before stopping (required)"
+    },
+    "claude": {
+      "type": "object",
+      "description": "Claude-specific configuration",
+      "required": ["api_style"],
+      "properties": {
+        "api_style": {
+          "type": "string",
+          "enum": ["messages", "messages_stream"],
+          "description": "Which Claude API style to use"
+        },
+        "anthropic_version": {
+          "type": "string",
+          "description": "Anthropic API version (e.g., '2023-06-01')",
+          "examples": ["2023-06-01", "2023-01-01"]
+        },
+        "anthropic_beta": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Beta features to enable (passed in anthropic-beta header)",
+          "examples": [["prompt-caching-2024-07-31"], ["extended-thinking-2024-12-12"]]
+        },
+        "service_tier": {
+          "type": "string",
+          "enum": ["auto", "standard_only"],
+          "description": "Processing priority tier"
+        },
+        "messages": {
+          "type": "object",
+          "description": "Messages API configuration",
+          "properties": {
+            "stream": {
+              "type": "boolean",
+              "description": "Enable incremental streaming using server-sent events"
+            },
+            "metadata": {
+              "type": "object",
+              "description": "Metadata about the request",
+              "properties": {
+                "user_id": {
+                  "type": "string",
+                  "description": "External identifier for end-user (UUID/hash, no PII). Used for abuse detection."
+                }
+              },
+              "additionalProperties": true
+            },
+            "system": {
+              "anyOf": [
+                {"type": "string"},
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["type", "text"],
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "text"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "cache_control": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "const": "ephemeral"
+                          },
+                          "ttl": {
+                            "type": "string",
+                            "description": "Cache time-to-live (e.g., '5m', '1h')",
+                            "examples": ["5m", "1h"]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {"type": "null"}
+              ],
+              "description": "System prompt - context and instructions for Claude"
+            },
+            "temperature": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Amount of randomness (0.0-1.0). Lower = more deterministic, higher = more creative. Default: 1.0"
+            },
+            "top_p": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Nucleus sampling. Use this OR temperature, not both"
+            },
+            "top_k": {
+              "anyOf": [
+                {"type": "integer", "minimum": 1},
+                {"type": "null"}
+              ],
+              "description": "Top-K sampling - removes long tail low probability responses"
+            },
+            "stop_sequences": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Custom text sequences that cause model to stop generating"
+            },
+            "tools": {
+              "type": "array",
+              "description": "Tool definitions (custom tools and server tools)",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "description": "Custom tool definition",
+                    "required": ["name", "input_schema"],
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Tool name"
+                      },
+                      "description": {
+                        "type": "string",
+                        "description": "Tool description for the model"
+                      },
+                      "input_schema": {
+                        "type": "object",
+                        "description": "JSON Schema for tool input"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "description": "Server tool (web_search, bash, text_editor)",
+                    "required": ["type"],
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": ["web_search", "bash_20241022", "text_editor_20241022"]
+                      },
+                      "name": {"type": "string"}
+                    }
+                  }
+                ]
+              }
+            },
+            "tool_choice": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "required": ["type"],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["auto", "any", "tool", "none"]
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Specific tool name (when type='tool')"
+                    },
+                    "disable_parallel_tool_use": {
+                      "type": "boolean",
+                      "description": "Limit to one tool use per turn"
+                    }
+                  }
+                },
+                {"type": "null"}
+              ],
+              "description": "Control which tool the model uses"
+            },
+            "thinking": {
+              "type": "object",
+              "description": "Extended thinking configuration (requires beta feature)",
+              "required": ["type"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["enabled", "disabled", "adaptive"],
+                  "description": "Thinking mode"
+                },
+                "budget_tokens": {
+                  "anyOf": [
+                    {"type": "integer", "minimum": 1024},
+                    {"type": "null"}
+                  ],
+                  "description": "Token budget for thinking (minimum 1024, must be less than max_tokens)"
+                }
+              },
+              "additionalProperties": false
+            },
+            "output_config": {
+              "type": "object",
+              "description": "Output configuration for structured responses",
+              "properties": {
+                "format": {
+                  "type": "object",
+                  "description": "JSON output format with schema",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "json"
+                    },
+                    "schema": {
+                      "type": "object",
+                      "description": "JSON Schema for output structure"
+                    }
+                  }
+                },
+                "effort": {
+                  "type": "string",
+                  "enum": ["low", "medium", "high", "max"],
+                  "description": "Effort level for structured output generation"
+                }
+              },
+              "additionalProperties": false
+            },
+            "inference_geo": {
+              "type": "string",
+              "description": "Geographic region for inference processing (e.g., 'us', 'eu')",
+              "examples": ["us", "eu"]
+            },
+            "container": {
+              "anyOf": [{"type": "string"}, {"type": "null"}],
+              "description": "Container identifier for sandboxed execution"
+            },
+            "context_management": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "description": "Context window management configuration"
+                },
+                {"type": "null"}
+              ]
+            },
+            "mcp_servers": {
+              "type": "array",
+              "description": "Model Context Protocol servers configuration",
+              "items": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}

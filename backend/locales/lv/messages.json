@@ -1,0 +1,20 @@
+{
+  "errors.internal": "Kaut kas nogāja greizi. Lūdzu, mēģiniet vēlreiz.",
+  "errors.http": "Pieprasījums neizdevās.",
+  "errors.validation": "Pieprasījuma validācija neizdevās.",
+  "errors.not_found": "Pieprasītais resurss nav atrasts.",
+  "auth.invalid_credentials": "Nepareizs e-pasts vai parole.",
+  "auth.email_already_exists": "Konts ar šo e-pasta adresi jau pastāv.",
+  "auth.invalid_token": "Nederīgs tokens.",
+  "auth.user_not_found": "Lietotājs nav atrasts.",
+  "chat.fallback.quick_reply_yes": "Jā",
+  "chat.fallback.quick_reply_no": "Nē",
+  "chat.fallback.quick_reply_not_sure": "Neesmu pārliecināts",
+  "chat.fallback.quick_reply_other": "Cits",
+  "chat.fallback.assistant_error": "Kaut kas nogāja greizi. Lūdzu, mēģiniet vēlreiz.",
+  "search.match.cpv": "CPV {value}",
+  "search.match.keywords": "atslēgvārdi: {value}",
+  "search.match.region": "reģions {value}",
+  "search.match.prefix": "Atrasts pēc: {parts}",
+  "search.match.all": "Atbilst visi iepirkumi"
+}

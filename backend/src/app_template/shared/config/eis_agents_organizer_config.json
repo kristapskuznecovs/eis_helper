@@ -1,0 +1,138 @@
+{
+  "$schema": "../../providers/openai_agent.schema.json",
+  "name": "organizer_agent",
+  "description": "Classifies and assesses relevance of Latvian construction procurement documents by LBN sections.",
+  "enabled": true,
+  "mode": "hybrid",
+  "provider": "openai",
+  "workers": 4,
+  "model": "gpt-4.1-mini",
+  "max_tokens": 300,
+  "api": {
+    "base_url": "https://api.openai.com/v1",
+    "api_key_env": "OPENAI_API_KEY",
+    "timeout_seconds": 60,
+    "retries": 3,
+    "retry_backoff_seconds": 1.5,
+    "organization": null,
+    "project": null,
+    "http_headers": {},
+    "proxy": null
+  },
+  "generation": {
+    "temperature": 0,
+    "top_p": 1,
+    "top_k": null,
+    "max_output_tokens": 300,
+    "max_completion_tokens": 300,
+    "candidate_count": 1,
+    "presence_penalty": 0,
+    "frequency_penalty": 0,
+    "repetition_penalty": null,
+    "seed": null,
+    "stop_sequences": [],
+    "n": 1,
+    "best_of": null,
+    "min_p": null,
+    "logprobs": false,
+    "top_logprobs": null
+  },
+  "output": {
+    "format": "json_object",
+    "strict": false,
+    "json_schema_name": "organizer_output",
+    "response_mime_type": "application/json",
+    "schema": {
+      "type": "object",
+      "required": ["section", "relevant", "reason"],
+      "properties": {
+        "section": {
+          "type": "string",
+          "enum": [
+            "AA", "AAT", "AMI", "AR", "AS",
+            "AVK-A", "AVK-K", "AVK-V",
+            "BA", "BAA", "BK",
+            "DN", "DOP", "DT", "DVP", "DZK",
+            "EL", "ELT", "ES-P",
+            "ESS", "ESS-CI", "ESS-DA", "ESS-PK", "ESS-AS", "ESS-TK", "ESS-VAS", "ESS-VN", "EST",
+            "FF",
+            "GA", "GAT", "GI", "GP",
+            "HB", "HI",
+            "IE", "IN", "IS",
+            "KK", "KT",
+            "LKT",
+            "MK", "MS", "MUK",
+            "PK",
+            "SA", "SAT", "SC", "SCB", "SK", "SM", "SP",
+            "T", "TAA", "TI", "TN",
+            "TS-CD", "TS-L",
+            "UAS", "UATS", "UK", "UKT", "UN", "UPP", "UR",
+            "VAP", "VI",
+            "ZP",
+            "OTHER"
+          ]
+        },
+        "relevant": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "tools": {
+    "allowed": [],
+    "tool_choice": "none",
+    "parallel_tool_calls": false,
+    "max_tool_calls": null,
+    "show_sources": false
+  },
+  "history": {
+    "enabled": false,
+    "path": "data/agent_history/organizer_agent_history.jsonl",
+    "store_raw_responses": false,
+    "redact_api_keys": true,
+    "max_entries": 5000
+  },
+  "progress": {
+    "show_in_progress_messages": true,
+    "classification_log_every_n": 50,
+    "scan_log_every_n": 100,
+    "emit_events": true
+  },
+  "prompts": {
+    "system_file": "config/agents/organizer/system_prompt.txt",
+    "user_file": "config/agents/organizer/user_prompt.txt",
+    "instructions_file": null,
+    "few_shot_file": null
+  },
+  "openai": {
+    "api_style": "chat_completions",
+    "response_api": {
+      "store": false,
+      "include": [],
+      "truncation": "disabled",
+      "previous_response_id": null,
+      "reasoning": {
+        "effort": "medium",
+        "summary": "auto"
+      }
+    },
+    "chat_completions": {
+      "service_tier": "auto",
+      "logit_bias": {},
+      "user": null,
+      "stream": false,
+      "stream_options": {
+        "include_usage": true
+      },
+      "metadata": {},
+      "audio": null,
+      "modalities": ["text"],
+      "prediction": null,
+      "parallel_tool_calls": false,
+      "tool_choice": "none"
+    }
+  }
+}

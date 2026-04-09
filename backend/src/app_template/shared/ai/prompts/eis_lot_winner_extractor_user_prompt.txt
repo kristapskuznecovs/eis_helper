@@ -1,0 +1,18 @@
+Extract lot-level winner information from this multi-lot procurement document.
+
+**Document Text:**
+{{document_text}}
+
+**Total Lots:** {{lot_count}}
+
+**All Participants (already extracted):**
+{{participant_list}}
+
+**Instructions:**
+For each lot (1 through {{lot_count}}):
+1. Identify which participants bid on that lot
+2. Determine the winner for that lot
+3. Extract winner's price for that lot
+4. Match participant names EXACTLY to the provided list above
+
+Return JSON with lot-by-lot breakdown including winner and all participants per lot.

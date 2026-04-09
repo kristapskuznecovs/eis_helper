@@ -1,0 +1,9 @@
+Extract winner and all participants from this scanned procurement report.
+
+Procurement ID: {{PROCUREMENT_ID}}
+File: {{FILE_NAME}}
+
+The following images show pages from the final report document. Look for tables with participant names and prices.
+
+Return JSON matching this schema:
+{{SCHEMA}}

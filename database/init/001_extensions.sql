@@ -1,0 +1,1 @@
+-- Place bootstrap SQL here when a project needs DB-level extensions.

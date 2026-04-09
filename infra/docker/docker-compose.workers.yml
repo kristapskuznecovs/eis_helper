@@ -1,0 +1,32 @@
+services:
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+
+  worker:
+    profiles: ["workers"]
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.backend
+    command: sh -lc "PYTHONPATH=src python -m app_template.worker"
+    env_file:
+      - ../../.env
+    depends_on:
+      - redis
+      - minio
+
+volumes:
+  minio_data:

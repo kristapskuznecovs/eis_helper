@@ -1,0 +1,4 @@
+Klasificē šo iepirkuma ierakstu. Izmanto nosaukumu, CPV, pasūtītāju, statusu un paredzamo vērtību kopā.
+
+Ieraksta JSON:
+{{PROJECT_JSON}}

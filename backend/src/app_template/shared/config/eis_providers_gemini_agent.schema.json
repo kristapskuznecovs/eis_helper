@@ -1,0 +1,272 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.eis/config/providers/gemini_agent.schema.json",
+  "title": "Google Gemini Agent Configuration Schema",
+  "description": "Complete schema for Google Gemini API configuration (generateContent and streamGenerateContent)",
+  "type": "object",
+  "required": ["provider", "model", "max_tokens", "gemini"],
+  "properties": {
+    "provider": {
+      "type": "string",
+      "const": "gemini",
+      "description": "Provider identifier - must be 'gemini'"
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Gemini model identifier (e.g., 'gemini-2.0-flash', 'gemini-3-flash-preview', 'gemini-2.0-flash-thinking-exp')",
+      "examples": ["gemini-2.0-flash", "gemini-3-flash-preview", "gemini-2.0-flash-thinking-exp", "gemini-1.5-pro"]
+    },
+    "max_tokens": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum number of tokens to generate"
+    },
+    "gemini": {
+      "type": "object",
+      "description": "Gemini-specific configuration",
+      "required": ["api_style"],
+      "properties": {
+        "api_style": {
+          "type": "string",
+          "enum": ["generateContent", "streamGenerateContent"],
+          "description": "Which Gemini API method to use"
+        },
+        "http_options": {
+          "type": "object",
+          "description": "HTTP configuration for API requests",
+          "properties": {
+            "api_version": {
+              "type": "string",
+              "enum": ["v1", "v1beta"],
+              "description": "Gemini API version to use"
+            }
+          },
+          "additionalProperties": true
+        },
+        "generation_config": {
+          "type": "object",
+          "description": "Generation parameters (generationConfig)",
+          "properties": {
+            "temperature": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2,
+              "description": "Controls randomness in output (0.0-2.0)"
+            },
+            "topP": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Nucleus sampling parameter"
+            },
+            "topK": {
+              "anyOf": [{"type": "integer", "minimum": 1}, {"type": "null"}],
+              "description": "Top-K sampling parameter"
+            },
+            "candidateCount": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8,
+              "description": "Number of response candidates to generate"
+            },
+            "maxOutputTokens": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum number of tokens in the response"
+            },
+            "stopSequences": {
+              "type": "array",
+              "items": {"type": "string"},
+              "maxItems": 5,
+              "description": "Sequences that will cause generation to stop (max 5)"
+            },
+            "presencePenalty": {
+              "type": "number",
+              "minimum": -2,
+              "maximum": 2,
+              "description": "Presence penalty to reduce repetition"
+            },
+            "frequencyPenalty": {
+              "type": "number",
+              "minimum": -2,
+              "maximum": 2,
+              "description": "Frequency penalty to reduce repetition"
+            },
+            "seed": {
+              "anyOf": [{"type": "integer"}, {"type": "null"}],
+              "description": "Random seed for deterministic generation"
+            },
+            "responseMimeType": {
+              "anyOf": [{"type": "string"}, {"type": "null"}],
+              "description": "MIME type for response format (e.g., 'application/json', 'text/plain')",
+              "examples": ["application/json", "text/plain", "text/x.enum"]
+            },
+            "responseSchema": {
+              "anyOf": [{"type": "object"}, {"type": "null"}],
+              "description": "JSON Schema for structured output (requires responseMimeType: 'application/json')"
+            },
+            "responseLogprobs": {
+              "type": "boolean",
+              "description": "Return log probabilities in response"
+            },
+            "logprobs": {
+              "anyOf": [
+                {"type": "integer", "minimum": 0, "maximum": 5},
+                {"type": "null"}
+              ],
+              "description": "Number of top log probabilities to return per token (0-5)"
+            },
+            "audioTimestamp": {
+              "type": "boolean",
+              "description": "Include timestamps for audio output"
+            },
+            "thinkingConfig": {
+              "type": "object",
+              "description": "Configuration for thinking-enabled models (e.g., gemini-2.0-flash-thinking-exp)",
+              "properties": {
+                "thinkingBudget": {
+                  "anyOf": [{"type": "integer", "minimum": 1}, {"type": "null"}],
+                  "description": "Token budget for thinking process"
+                },
+                "includeThoughts": {
+                  "type": "boolean",
+                  "description": "Include thinking process in response"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "safety_settings": {
+          "type": "array",
+          "description": "Safety filtering configuration",
+          "items": {
+            "type": "object",
+            "required": ["category", "threshold"],
+            "properties": {
+              "category": {
+                "type": "string",
+                "enum": [
+                  "HARM_CATEGORY_HARASSMENT",
+                  "HARM_CATEGORY_HATE_SPEECH",
+                  "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                  "HARM_CATEGORY_DANGEROUS_CONTENT",
+                  "HARM_CATEGORY_CIVIC_INTEGRITY"
+                ],
+                "description": "Harm category to filter"
+              },
+              "threshold": {
+                "type": "string",
+                "enum": [
+                  "BLOCK_NONE",
+                  "BLOCK_ONLY_HIGH",
+                  "BLOCK_MEDIUM_AND_ABOVE",
+                  "BLOCK_LOW_AND_ABOVE",
+                  "HARM_BLOCK_THRESHOLD_UNSPECIFIED"
+                ],
+                "description": "Blocking threshold for the category"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "tools": {
+          "type": "array",
+          "description": "Tools available to the model (function calling, code execution)",
+          "items": {
+            "type": "object",
+            "properties": {
+              "functionDeclarations": {
+                "type": "array",
+                "description": "Custom function definitions",
+                "items": {
+                  "type": "object",
+                  "required": ["name", "description", "parameters"],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Function name"
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "Function description for the model"
+                    },
+                    "parameters": {
+                      "type": "object",
+                      "description": "JSON Schema for function parameters"
+                    }
+                  }
+                }
+              },
+              "codeExecution": {
+                "type": "object",
+                "description": "Enable code execution tool"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "tool_config": {
+          "anyOf": [
+            {
+              "type": "object",
+              "description": "Tool configuration for function calling",
+              "properties": {
+                "functionCallingConfig": {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "type": "string",
+                      "enum": ["AUTO", "ANY", "NONE"],
+                      "description": "Function calling mode"
+                    },
+                    "allowedFunctionNames": {
+                      "type": "array",
+                      "items": {"type": "string"},
+                      "description": "Restrict to specific functions"
+                    }
+                  }
+                }
+              }
+            },
+            {"type": "null"}
+          ]
+        },
+        "system_instruction": {
+          "anyOf": [
+            {"type": "string"},
+            {
+              "type": "object",
+              "properties": {
+                "parts": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "text": {"type": "string"}
+                    }
+                  }
+                }
+              }
+            },
+            {"type": "null"}
+          ],
+          "description": "System instructions for the model (system prompt)"
+        },
+        "cached_content": {
+          "anyOf": [{"type": "string"}, {"type": "null"}],
+          "description": "Name of cached content to use as context"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {"type": "string"},
+          "description": "Labels for organizing and filtering requests"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}

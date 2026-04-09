@@ -1,0 +1,10 @@
+Extract winner and all participants from this procurement final report.
+
+Procurement ID: {{PROCUREMENT_ID}}
+File: {{FILE_NAME}}
+
+Document text:
+{{DOCUMENT_TEXT}}
+
+Return JSON matching this schema:
+{{SCHEMA}}
