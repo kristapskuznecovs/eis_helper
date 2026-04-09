@@ -32,6 +32,8 @@ export default function HomePage() {
 
   const [myCompanyCpvPrefixes, setMyCompanyCpvPrefixes] = useState<string[]>([]);
 
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
     if (!company) { setMyCompanyCpvPrefixes([]); return; }
     resolveCompanyCpv(company.name, locale, company.reg_number)
@@ -331,11 +333,11 @@ export default function HomePage() {
               className="relative inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] font-medium text-muted-foreground transition-all duration-200 hover:bg-secondary/80 hover:text-foreground"
             >
               {t("nav.my")}
-              {totalNew > 0 ? (
+              {mounted && totalNew > 0 ? (
                 <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
                   {totalNew > 99 ? "99+" : totalNew}
                 </span>
-              ) : (company || bookmarks.length > 0) ? (
+              ) : mounted && (company || bookmarks.length > 0) ? (
                 <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
               ) : null}
             </LocalizedLink>
