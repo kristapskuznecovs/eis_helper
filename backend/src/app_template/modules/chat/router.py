@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app_template.shared.db.session import SessionLocal
+from app_template.shared.auth.dependencies import get_current_user
 
 from .service import ChatService, SearchService
 from .sync import EISSyncService
@@ -164,7 +165,7 @@ def my_activity(company: str, reg_number: str | None = None, db: Session = Depen
 
 
 @router.post("/sync")
-def sync(full: bool = False, db: Session = Depends(get_db)) -> Any:
+def sync(full: bool = False, db: Session = Depends(get_db), _: Any = Depends(get_current_user)) -> Any:
     """Trigger EIS procurement sync. Use ?full=true for initial backfill."""
     service = EISSyncService()
     return service.run(db=db, full=full)

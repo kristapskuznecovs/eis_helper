@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,6 +27,13 @@ class Settings(BaseSettings):
 
     api_host: str = "0.0.0.0"
     api_port: int = 8000
+
+    @field_validator("jwt_secret_key")
+    @classmethod
+    def jwt_secret_must_not_be_default(cls, v: str) -> str:
+        if v == "change-me":
+            raise ValueError("JWT_SECRET_KEY must be set to a real secret before running")
+        return v
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore")
 

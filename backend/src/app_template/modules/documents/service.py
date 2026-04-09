@@ -9,7 +9,7 @@ from app_template.shared.storage import service as storage_service
 
 def create_document(db: Session, file: UploadFile) -> Document:
     content = file.file.read()
-    filename = file.filename or "upload.bin"
+    filename = Path(file.filename or "upload.bin").name
     relative_path = str(Path("documents") / filename)
     stored_file = storage_service.upload(
         key=relative_path,
