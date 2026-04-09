@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
+import { BookmarkPlus } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 import LocalizedLink from "@/components/i18n/LocalizedLink";
@@ -25,6 +26,7 @@ export default function HomePage() {
   const { company } = useMyCompany();
   const { filters: savedFilters, save: saveFilter, markSeen } = useSavedFilters();
   const { totalNew } = useFilterNewCounts(savedFilters, locale);
+  const [mounted, setMounted] = useState(false);
   const [showSaveFilter, setShowSaveFilter] = useState(false);
   const [savedConfirm, setSavedConfirm] = useState(false);
 
@@ -376,22 +378,33 @@ export default function HomePage() {
             onToggle={() => setAdvancedOpen((prev) => !prev)}
             saveControls={
               hasActiveFilters ? (
-                showSaveFilter ? (
-                  <div className="w-full sm:flex-1">
-                    <SaveFilterInline
-                      onSave={handleSaveFilter}
-                      onCancel={() => setShowSaveFilter(false)}
-                    />
-                  </div>
+                savedConfirm ? (
+                  <span className="text-[13px] font-medium text-primary">
+                    {t("my.filters.saved")}
+                  </span>
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setShowSaveFilter(true)}
-                    className="text-left text-[13px] font-medium text-muted-foreground/60 transition-colors hover:text-foreground"
+                    onClick={() => setShowSaveFilter((prev) => !prev)}
+                    aria-pressed={showSaveFilter}
+                    className={`flex h-10 items-center gap-1.5 rounded-xl border px-3 text-[13px] font-medium transition-colors ${
+                      showSaveFilter
+                        ? "border-primary/40 bg-primary/10 text-primary"
+                        : "border-border/60 bg-card text-muted-foreground hover:border-border hover:text-foreground"
+                    }`}
                   >
-                    {savedConfirm ? t("my.filters.saved") : t("my.filters.saveThisSearch")}
+                    <BookmarkPlus className="h-4 w-4" />
+                    {t("my.filters.saveThisSearch")}
                   </button>
                 )
+              ) : null
+            }
+            saveForm={
+              hasActiveFilters && showSaveFilter && !savedConfirm ? (
+                <SaveFilterInline
+                  onSave={handleSaveFilter}
+                  onCancel={() => setShowSaveFilter(false)}
+                />
               ) : null
             }
           />

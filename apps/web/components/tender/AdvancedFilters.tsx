@@ -16,13 +16,14 @@ interface AdvancedFiltersProps {
   open: boolean;
   onToggle: () => void;
   saveControls?: ReactNode;
+  saveForm?: ReactNode;
 }
 
 const inputClass =
   "h-9 w-full rounded-lg border-0 bg-secondary/60 px-3 text-[14px] text-foreground placeholder:text-muted-foreground/40 transition-all duration-200 focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/30";
 const selectClass = `${inputClass} appearance-none cursor-pointer`;
 
-const AdvancedFilters = ({ filters, onChange, onSearch, open, onToggle, saveControls }: AdvancedFiltersProps) => {
+const AdvancedFilters = ({ filters, onChange, onSearch, open, onToggle, saveControls, saveForm }: AdvancedFiltersProps) => {
   const locale = useLocale();
   const t = useTranslations("search.advanced");
   const common = useTranslations("common");
@@ -407,6 +408,7 @@ const AdvancedFilters = ({ filters, onChange, onSearch, open, onToggle, saveCont
               </Button>
               {saveControls}
             </div>
+            {saveForm && <div>{saveForm}</div>}
           </div>
         </div>
       )}

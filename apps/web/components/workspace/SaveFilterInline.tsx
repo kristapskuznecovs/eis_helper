@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check } from "lucide-react";
+import { BookmarkPlus, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 interface SaveFilterInlineProps {
@@ -25,8 +25,11 @@ export function SaveFilterInline({ onSave, onCancel }: SaveFilterInlineProps) {
   };
 
   return (
-    <div className="animate-slide-up rounded-2xl border border-border/50 bg-card p-4 shadow-card">
-      <p className="mb-2 text-[12px] font-medium text-muted-foreground/70">{t("savePrompt")}</p>
+    <div className="animate-slide-up rounded-xl border border-border/60 bg-card p-3 shadow-sm">
+      <p className="mb-2 flex items-center gap-1.5 text-[12px] font-semibold text-foreground/70 uppercase tracking-wide">
+        <BookmarkPlus className="h-3.5 w-3.5" />
+        {t("savePrompt")}
+      </p>
       <div className="flex gap-2">
         <input
           ref={inputRef}
@@ -37,13 +40,13 @@ export function SaveFilterInline({ onSave, onCancel }: SaveFilterInlineProps) {
             if (e.key === "Escape") onCancel();
           }}
           placeholder={t("savePlaceholder")}
-          className="h-9 flex-1 rounded-lg border-0 bg-secondary/60 px-3 text-[14px] text-foreground placeholder:text-muted-foreground/40 focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="h-9 flex-1 rounded-lg border border-border/60 bg-background px-3 text-[14px] text-foreground placeholder:text-muted-foreground/40 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
         <button
           type="button"
           onClick={handleSave}
           disabled={!name.trim()}
-          className="flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-[13px] font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-40"
+          className="flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-35"
         >
           <Check className="h-3.5 w-3.5" />
           {t("save")}
@@ -51,7 +54,7 @@ export function SaveFilterInline({ onSave, onCancel }: SaveFilterInlineProps) {
         <button
           type="button"
           onClick={onCancel}
-          className="h-9 rounded-lg px-3 text-[13px] font-medium text-muted-foreground/60 transition-colors hover:text-foreground"
+          className="h-9 rounded-lg px-3 text-[13px] font-medium text-muted-foreground/70 transition-colors hover:text-foreground"
         >
           {t("cancel")}
         </button>
