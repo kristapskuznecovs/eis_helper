@@ -22,6 +22,19 @@ import type { MyActivityResponse, SavedFilter } from "@/lib/types/tender";
 
 type Tab = "profile" | "activity" | "filters" | "bookmarks";
 
+function parseActivityDate(value?: string | null): number {
+  if (!value) return Number.NEGATIVE_INFINITY;
+
+  const iso = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3])).getTime();
+
+  const lv = value.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  if (lv) return new Date(Number(lv[3]), Number(lv[2]) - 1, Number(lv[1])).getTime();
+
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? Number.NEGATIVE_INFINITY : parsed;
+}
+
 export default function MyWorkspacePage() {
   const t = useTranslations("my");
   const locale = useLocale() as AppLocale;
@@ -54,6 +67,12 @@ export default function MyWorkspacePage() {
   const [activity, setActivity] = useState<MyActivityResponse | null>(null);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityError, setActivityError] = useState<string | null>(null);
+  const sortedWins = [...(activity?.wins ?? [])].sort(
+    (a, b) => parseActivityDate(b.signed_date) - parseActivityDate(a.signed_date),
+  );
+  const sortedParticipations = [...(activity?.participations ?? [])].sort(
+    (a, b) => parseActivityDate(b.submission_deadline) - parseActivityDate(a.submission_deadline),
+  );
 
   // Sync draft when company loads from localStorage
   useEffect(() => {
@@ -311,7 +330,7 @@ export default function MyWorkspacePage() {
                     <p className="text-[13px] text-muted-foreground/50">{t("activity.noWins")}</p>
                   ) : (
                     <div className="space-y-2">
-                      {activity.wins.map((item) => (
+                      {sortedWins.map((item) => (
                         <ActivityCard key={item.procurement_id} item={item} variant="win" />
                       ))}
                     </div>
@@ -329,7 +348,7 @@ export default function MyWorkspacePage() {
                     <p className="text-[13px] text-muted-foreground/50">{t("activity.noParticipations")}</p>
                   ) : (
                     <div className="space-y-2">
-                      {activity.participations.map((item) => (
+                      {sortedParticipations.map((item) => (
                         <ActivityCard key={item.procurement_id} item={item} variant="participation" />
                       ))}
                     </div>

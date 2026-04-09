@@ -353,6 +353,7 @@ DATASET_CONFIGS: dict[str, dict] = {
                     EXCLUDED.contract_value_original_eur
                 ),
                 contract_signed_date = COALESCE(EXCLUDED.contract_signed_date, ckan_results.contract_signed_date),
+                source_year          = EXCLUDED.source_year,
                 procurement_title    = COALESCE(EXCLUDED.procurement_title, ckan_results.procurement_title),
                 synced_at            = NOW()
         """,

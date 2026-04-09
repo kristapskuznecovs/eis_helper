@@ -144,6 +144,17 @@
     "bookmarks": {
       "add": "Bookmark",
       "remove": "Remove bookmark"
+    },
+    "chatUi": {
+      "noneOfThese": "None of these",
+      "disambiguationQuestion": "Which \"{name}\" did you mean?",
+      "disambiguationFound": "I found several companies matching \"{name}\". Which one did you mean?",
+      "removeFilterIntent": "Remove the {filter} filter",
+      "suggestionRemoveRegion": "Remove the region filter",
+      "suggestionBroadenCategory": "Broaden the category to include more results",
+      "suggestionKeywordsOnly": "Search using only keywords, ignore other filters",
+      "suggestionOpenAdvanced": "What other filters can I adjust?",
+      "assistantError": "Something went wrong. Please try again."
     }
   },
   "bookmarks": {
@@ -233,6 +244,8 @@
       "noWins": "No wins found.",
       "noParticipations": "No participations found.",
       "stats": {
+        "totalContracts": "Total contracts",
+        "bidsSub": "{bids} bids · {direct} direct",
         "participated": "Participated",
         "won": "Won",
         "winRate": "Win rate",

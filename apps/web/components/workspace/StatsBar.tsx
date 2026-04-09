@@ -19,21 +19,27 @@ export function StatsBar({ stats }: StatsBarProps) {
       notation: value >= 1_000_000 ? "compact" : "standard",
     }).format(value);
 
-  const winRatePct = Math.min(stats.win_rate * 100, 100).toFixed(0);
+  const winRatePct = (stats.win_rate * 100).toFixed(0);
+  const directAwards = stats.total_contracts - stats.total_bids;
 
   const items = [
-    { label: t("participated"), value: stats.total_participations.toLocaleString(locale) },
-    { label: t("won"), value: stats.total_wins.toLocaleString(locale) },
-    { label: t("winRate"), value: `${winRatePct}%` },
-    { label: t("totalWon"), value: formatEur(stats.total_won_value_eur) },
+    {
+      label: t("totalContracts"),
+      value: stats.total_contracts.toLocaleString(locale),
+      sub: t("bidsSub", { bids: stats.total_bids, direct: directAwards }),
+    },
+    { label: t("won"), value: stats.total_wins.toLocaleString(locale), sub: null },
+    { label: t("winRate"), value: `${winRatePct}%`, sub: null },
+    { label: t("totalWon"), value: formatEur(stats.total_won_value_eur), sub: null },
   ];
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {items.map(({ label, value }) => (
+      {items.map(({ label, value, sub }) => (
         <div key={label} className="rounded-2xl bg-secondary/50 p-3 text-center">
           <p className="tabular-nums text-[20px] font-bold text-foreground">{value}</p>
           <p className="text-[12px] text-muted-foreground/70">{label}</p>
+          {sub && <p className="mt-0.5 text-[10px] text-muted-foreground/40">{sub}</p>}
         </div>
       ))}
     </div>

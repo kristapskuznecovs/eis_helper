@@ -118,6 +118,7 @@ export interface ChatState {
   isSearching: boolean;
   extractedFilters: ExtractedFilters | null;
   sessionId: string | null;
+  chatLocale: "lv" | "en" | null;
   pendingCompanyResolve?: {
     remaining: string[];
     mergedFilters: ExtractedFilters;
@@ -127,6 +128,7 @@ export interface ChatState {
 export interface ChatRequest {
   messages: Array<{ role: "user" | "assistant"; content: string }>;
   my_company?: { name: string; cpv_prefixes: string[] };
+  chat_locale?: "lv" | "en";
 }
 
 export interface ChatResponseQuestion {
@@ -136,6 +138,7 @@ export interface ChatResponseQuestion {
   quick_replies?: string[];
   filter_summary?: Record<string, string>;
   session_id?: string;
+  chat_locale?: "lv" | "en";
 }
 
 export interface ChatResponseSearchReady {
@@ -143,6 +146,7 @@ export interface ChatResponseSearchReady {
   message: string;
   filters: ExtractedFilters;
   session_id?: string;
+  chat_locale?: "lv" | "en";
 }
 
 export type ChatResponse = ChatResponseQuestion | ChatResponseSearchReady;
@@ -167,7 +171,9 @@ export interface ActivityItem {
 }
 
 export interface ActivityStats {
-  total_participations: number;
+  total_contracts: number;
+  total_bids: number;
+  total_participations: number; // alias for total_bids
   total_wins: number;
   win_rate: number;
   total_won_value_eur: number;

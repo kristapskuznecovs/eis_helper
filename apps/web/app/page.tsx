@@ -17,8 +17,20 @@ import { useFilterNewCounts } from "@/lib/hooks/useFilterNewCounts";
 import { useMyCompany } from "@/lib/hooks/useMyCompany";
 import { useSavedFilters } from "@/lib/hooks/useSavedFilters";
 import type { ActiveFilter, ChatState, ExtractedFilters, SavedFilter, TenderResult } from "@/lib/types/tender";
+import enMessages from "@/locales/en.json";
+import lvMessages from "@/locales/lv.json";
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+type ChatLocale = "lv" | "en";
+
+const CHAT_MESSAGES = {
+  en: enMessages.search.chatUi,
+  lv: lvMessages.search.chatUi,
+} as const;
+
+function getChatMessages(locale: ChatLocale | null | undefined) {
+  return CHAT_MESSAGES[locale === "en" ? "en" : "lv"];
+}
 
 export default function HomePage() {
   const locale = useLocale();
@@ -47,6 +59,7 @@ export default function HomePage() {
     isSearching: false,
     extractedFilters: null,
     sessionId: null,
+    chatLocale: null,
   });
   const [advancedFilters, setAdvancedFilters] = useState<ExtractedFilters>({});
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -115,6 +128,9 @@ export default function HomePage() {
   }, [locale, markSeen, t]);
 
   const handleChatMessage = useCallback(async (text: string) => {
+    const effectiveChatLocale: ChatLocale = chat.chatLocale ?? (locale === "en" ? "en" : "lv");
+    const chatText = getChatMessages(effectiveChatLocale);
+
     // If we're in a company disambiguation flow, handle the user's pick
     if (chat.pendingCompanyResolve) {
       const { mergedFilters } = chat.pendingCompanyResolve;
@@ -128,7 +144,7 @@ export default function HomePage() {
 
       let updatedFilters = { ...mergedFilters };
       const chosenName = text.trim();
-      if (chosenName !== "None of these") {
+      if (chosenName !== chatText.noneOfThese) {
         try {
           const profile = await resolveCompanyCpv(chosenName, locale);
           if (profile.cpv_prefixes.length > 0) {
@@ -154,13 +170,13 @@ export default function HomePage() {
         try {
           const candidates = await resolveCompanyCandidates(nextCompany, locale);
           if (candidates.length > 0) {
-            const quickReplies = [...candidates.slice(0, 6).map((c) => c.name), "None of these"];
+            const quickReplies = [...candidates.slice(0, 6).map((c) => c.name), chatText.noneOfThese];
             setChat((prev) => ({
               ...prev,
               messages: [...prev.messages, {
                 id: generateId(),
                 role: "assistant" as const,
-                content: `Which "${nextCompany}" did you mean?`,
+                  content: getChatMessages(prev.chatLocale ?? effectiveChatLocale).disambiguationQuestion.replace("{name}", nextCompany),
                 quick_replies: quickReplies,
               }],
               pendingCompanyResolve: { remaining: remaining.slice(1), mergedFilters: updatedFilters },
@@ -192,12 +208,14 @@ export default function HomePage() {
           my_company: company && myCompanyCpvPrefixes.length > 0
             ? { name: company.name, cpv_prefixes: myCompanyCpvPrefixes }
             : undefined,
+          chat_locale: chat.chatLocale ?? undefined,
         },
         locale,
         chat.sessionId,
       );
 
       const sessionId = response.session_id ?? chat.sessionId;
+      const responseChatLocale = response.chat_locale ?? chat.chatLocale ?? (locale === "en" ? "en" : "lv");
 
       if (response.type === "question") {
         const assistantMessage = {
@@ -212,6 +230,7 @@ export default function HomePage() {
           messages: [...prev.messages, assistantMessage],
           isWaiting: false,
           sessionId,
+          chatLocale: responseChatLocale,
         }));
       } else {
         const assistantMessage = {
@@ -224,6 +243,7 @@ export default function HomePage() {
           messages: [...prev.messages, assistantMessage],
           isWaiting: false,
           sessionId,
+          chatLocale: responseChatLocale,
         }));
 
         let mergedFilters = response.filters;
@@ -233,16 +253,20 @@ export default function HomePage() {
             // Always disambiguate — show candidates for the first company so user confirms the exact entity
             const candidates = await resolveCompanyCandidates(similarCos[0], locale);
             if (candidates.length > 0) {
-              const quickReplies = [...candidates.slice(0, 6).map((c) => c.name), "None of these"];
+              const quickReplies = [
+                ...candidates.slice(0, 6).map((c) => c.name),
+                getChatMessages(responseChatLocale).noneOfThese,
+              ];
               setChat((prev) => ({
                 ...prev,
                 messages: [...prev.messages, {
                   id: generateId(),
                   role: "assistant" as const,
-                  content: `I found several companies matching "${similarCos[0]}". Which one did you mean?`,
+                  content: getChatMessages(responseChatLocale).disambiguationFound.replace("{name}", similarCos[0]),
                   quick_replies: quickReplies,
                 }],
                 pendingCompanyResolve: { remaining: similarCos.slice(1), mergedFilters },
+                chatLocale: responseChatLocale,
               }));
               return; // wait for user to pick
             }
@@ -267,7 +291,7 @@ export default function HomePage() {
       const errorMessage = {
         id: generateId(),
         role: "assistant" as const,
-        content: t("search.assistantError"),
+        content: getChatMessages(chat.chatLocale ?? (locale === "en" ? "en" : "lv")).assistantError,
       };
       setChat((prev) => ({
         ...prev,
@@ -300,19 +324,21 @@ export default function HomePage() {
   })();
 
   const handleRemoveFilter = useCallback((key: string) => {
-    handleChatMessage(`Remove the ${key.replace(/_/g, " ")} filter`);
-  }, [handleChatMessage]);
+    const chatText = getChatMessages(chat.chatLocale ?? (locale === "en" ? "en" : "lv"));
+    handleChatMessage(chatText.removeFilterIntent.replace("{filter}", key.replace(/_/g, " ")));
+  }, [chat.chatLocale, handleChatMessage, locale]);
 
   const handleSuggestion = useCallback((action: string) => {
+    const chatText = getChatMessages(chat.chatLocale ?? (locale === "en" ? "en" : "lv"));
     const messages: Record<string, string> = {
-      remove_region: "Remove the region filter",
-      broaden_category: "Broaden the category to include more results",
-      keywords_only: "Search using only keywords, ignore other filters",
-      open_advanced: "What other filters can I adjust?",
+      remove_region: chatText.suggestionRemoveRegion,
+      broaden_category: chatText.suggestionBroadenCategory,
+      keywords_only: chatText.suggestionKeywordsOnly,
+      open_advanced: chatText.suggestionOpenAdvanced,
     };
     const message = messages[action];
     if (message) handleChatMessage(message);
-  }, [handleChatMessage]);
+  }, [chat.chatLocale, handleChatMessage, locale]);
 
   const hasSearched = results !== null || chat.isSearching;
 

@@ -144,6 +144,17 @@
     "bookmarks": {
       "add": "Saglabāt",
       "remove": "Noņemt saglabāto"
+    },
+    "chatUi": {
+      "noneOfThese": "Neviens no šiem",
+      "disambiguationQuestion": "Kuru \"{name}\" jūs domājāt?",
+      "disambiguationFound": "Atradās vairāki uzņēmumi, kas atbilst \"{name}\". Kuru jūs domājāt?",
+      "removeFilterIntent": "Noņemt {filter} filtru",
+      "suggestionRemoveRegion": "Noņemt reģiona filtru",
+      "suggestionBroadenCategory": "Paplašināt kategoriju, lai iekļautu vairāk rezultātu",
+      "suggestionKeywordsOnly": "Meklēt tikai pēc atslēgvārdiem, ignorēt pārējos filtrus",
+      "suggestionOpenAdvanced": "Kādus citus filtrus varu pielāgot?",
+      "assistantError": "Kaut kas nogāja greizi. Lūdzu, mēģiniet vēlreiz."
     }
   },
   "bookmarks": {
@@ -233,6 +244,8 @@
       "noWins": "Uzvaras nav atrastas.",
       "noParticipations": "Dalība nav atrasta.",
       "stats": {
+        "totalContracts": "Kopā iepirkumi",
+        "bidsSub": "{bids} konkursi · {direct} tiešie",
         "participated": "Dalība",
         "won": "Uzvarēts",
         "winRate": "Uzvaras %",

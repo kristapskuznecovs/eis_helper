@@ -38,6 +38,7 @@ class MyCompanyContext(BaseModel):
 class ChatRequest(BaseModel):
     messages: list[ChatMessageIn]
     my_company: MyCompanyContext | None = None
+    chat_locale: str | None = None
 
 
 class SearchFilters(BaseModel):
@@ -102,7 +103,9 @@ class ActivityItem(BaseModel):
 
 
 class ActivityStats(BaseModel):
-    total_participations: int
+    total_contracts: int
+    total_bids: int
+    total_participations: int  # alias for total_bids
     total_wins: int
     win_rate: float
     total_won_value_eur: float
@@ -119,7 +122,7 @@ class MyActivityResponse(BaseModel):
 def chat(request: ChatRequest) -> Any:
     service = ChatService()
     messages = [{"role": m.role, "content": m.content} for m in request.messages]
-    return service.process(messages, my_company=request.my_company)
+    return service.process(messages, my_company=request.my_company, chat_locale=request.chat_locale)
 
 
 @router.post("/search")

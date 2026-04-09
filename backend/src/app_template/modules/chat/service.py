@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import date, timedelta
 from typing import Any
 
@@ -12,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app_template.modules.chat.models import Procurement
 from app_template.settings import get_settings
-from app_template.shared.i18n import _, get_locale
+from app_template.shared.i18n import _, get_locale, set_locale
 
 # Map English category names to CPV code prefixes
 CATEGORY_CPV_MAP: dict[str, list[str]] = {
@@ -46,7 +47,106 @@ SUBJECT_TYPE_MAP = {
     "supplies": "Piegāde",
 }
 
-SYSTEM_PROMPT = """You are a procurement assistant helping users find relevant public tenders on the Latvian EIS (Elektroniskā iepirkumu sistēma) system.
+CHAT_LOCALES = {"lv", "en"}
+LATVIAN_DIACRITICS_RE = re.compile(r"[āčēģīķļņšūž]")
+TOKEN_RE = re.compile(r"[a-zA-Zāčēģīķļņšūž]+", re.IGNORECASE)
+ENGLISH_HINTS = {
+    "a", "an", "and", "any", "broaden", "building", "company", "construction", "deadline", "filter", "for",
+    "found", "help", "i", "ignore", "in", "it", "keywords", "looking", "month", "need", "next", "no", "of",
+    "only", "other", "over", "preference", "region", "remove", "search", "services", "software", "the", "these",
+    "this", "training", "under", "weeks", "which", "with",
+}
+LATVIAN_HINTS = {
+    "ar", "apmācības", "atradu", "būvniecība", "cits", "filtru", "ir", "jums", "kāda", "ko", "man", "meklēju",
+    "mēnesis", "mēneša", "nākamais", "nākamās", "nav", "nedēļas", "noņemt", "pakalpojumi", "paplašināt",
+    "reģiona", "reģions", "tikai", "un", "uzņēmums", "vairāk", "vēlos",
+}
+
+
+def detect_message_locale(text: str) -> str | None:
+    normalized = text.strip().lower()
+    if not normalized:
+        return None
+    if LATVIAN_DIACRITICS_RE.search(normalized):
+        return "lv"
+
+    tokens = TOKEN_RE.findall(normalized)
+    if not tokens:
+        return None
+
+    english_score = sum(token in ENGLISH_HINTS for token in tokens)
+    latvian_score = sum(token in LATVIAN_HINTS for token in tokens)
+
+    if english_score >= 2 and english_score > latvian_score:
+        return "en"
+    if latvian_score >= 1 and latvian_score > english_score:
+        return "lv"
+    return None
+
+
+def resolve_chat_locale(messages: list[dict[str, str]], chat_locale: str | None, request_locale: str) -> str:
+    for message in reversed(messages):
+        if message.get("role") != "user":
+            continue
+        detected = detect_message_locale(message.get("content", ""))
+        if detected in CHAT_LOCALES:
+            return detected
+        break
+    if chat_locale in CHAT_LOCALES:
+        return chat_locale
+    return request_locale if request_locale in CHAT_LOCALES else "lv"
+
+
+def _translate_for_locale(locale: str, key: str) -> str:
+    current_locale = get_locale()
+    set_locale(locale)
+    try:
+        return _(key)
+    finally:
+        set_locale(current_locale)
+
+
+def fallback_quick_replies_for_locale(locale: str) -> list[str]:
+    return [
+        _translate_for_locale(locale, "chat.fallback.quick_reply_yes"),
+        _translate_for_locale(locale, "chat.fallback.quick_reply_no"),
+        _translate_for_locale(locale, "chat.fallback.quick_reply_not_sure"),
+        _translate_for_locale(locale, "chat.fallback.quick_reply_other"),
+    ]
+
+
+def build_system_prompt(chat_locale: str, company_context: str = "") -> str:
+    response_language = "Latvian" if chat_locale == "lv" else "English"
+    option_other = "Cits" if chat_locale == "lv" else "Other"
+    contract_value_examples = (
+        '["Līdz €20k", "€20k–€100k", "€100k–€500k", "Virs €500k", "Nav preferences", "Cits"]'
+        if chat_locale == "lv"
+        else '["Under €20k", "€20k–€100k", "€100k–€500k", "Over €500k", "No preference", "Other"]'
+    )
+    urgency_examples = (
+        '["Nākamās 2 nedēļas", "Nākamais mēnesis", "Nākamie 3 mēneši", "Nav preferences", "Cits"]'
+        if chat_locale == "lv"
+        else '["Next 2 weeks", "Next month", "Next 3 months", "No preference", "Other"]'
+    )
+    tech_examples = (
+        '[".NET / C#", "Java", "C / C++", "Python", "SAP / Oracle", "Cits"]'
+        if chat_locale == "lv"
+        else '[".NET / C#", "Java", "C / C++", "Python", "SAP / Oracle", "Other"]'
+    )
+    similar_company_question = (
+        "Vai zināt konkurentu vai līdzīgu uzņēmumu, kura iepirkumu aktivitāti vēlaties atdarināt? "
+        "Varu izmantot tā CPV kategorijas, lai paplašinātu meklēšanu."
+        if chat_locale == "lv"
+        else "Do you know a competitor or similar company whose tender activity you'd like to match? "
+        "I can use their CPV categories to broaden your search."
+    )
+    similar_company_replies = (
+        '["Jā, nosaukšu uzņēmumu", "Nē, paldies", "Ko tas nozīmē?"]'
+        if chat_locale == "lv"
+        else '["Yes, I\'ll name one", "No thanks", "What does this mean?"]'
+    )
+
+    return f"""You are a procurement assistant helping users find relevant public tenders on the Latvian EIS (Elektroniskā iepirkumu sistēma) system.
 
 Your job is to ask targeted questions one at a time to collect the following filter information:
 - category: what industry/type (construction, it, consulting, training, engineering, healthcare, supplies)
@@ -58,10 +158,10 @@ Your job is to ask targeted questions one at a time to collect the following fil
 
 IMPORTANT: Always search for OPEN tenders only (status: "open"). Never ask the user about tender status — it is always open. Always set deadline_days to at least 14 (2 weeks) by default unless the user says otherwise.
 
-CRITICAL: Every question response MUST include "quick_replies" with 3-6 short clickable options AND always include "Other" as the last option. Never omit quick_replies. Examples:
-- Contract value question → ["Under €20k", "€20k–€100k", "€100k–€500k", "Over €500k", "No preference", "Other"]
-- Urgency question → ["Next 2 weeks", "Next month", "Next 3 months", "No preference", "Other"]
-- Tech stack question → [".NET / C#", "Java", "C / C++", "Python", "SAP / Oracle", "Other"]
+CRITICAL: Every question response MUST include "quick_replies" with 3-6 short clickable options AND always include "{option_other}" as the last option. Never omit quick_replies. Examples:
+- Contract value question → {contract_value_examples}
+- Urgency question → {urgency_examples}
+- Tech stack question → {tech_examples}
 - cpv_prefixes: CPV code prefixes (e.g. "45" for construction, "72" for IT)
 
 Rules:
@@ -71,7 +171,7 @@ Rules:
    a. Industry-specific specialization (for IT: exact tech stack/platforms; for construction: work type; for consulting: domain; etc.)
    b. Contract value range (always ask — never assume)
    c. Urgency / deadline preference (default 2 weeks if skipped)
-   d. Similar company: ask "Do you know a competitor or similar company whose tender activity you'd like to match? I can use their CPV categories to broaden your search." quick_replies: ["Yes, I'll name one", "No thanks", "What does this mean?"]
+   d. Similar company: ask "{similar_company_question}" quick_replies: {similar_company_replies}
       - If user names a company, set similar_companies: ["CompanyName"] in filters.
       - If user already mentioned a company in their first message (e.g. "similar to RBS"), extract it immediately, set similar_companies, and skip asking.
    Only after all 4 are answered (or explicitly skipped by user), return search_ready.
@@ -83,20 +183,21 @@ Rules:
    - Engineering: ask discipline (building design, civil, MEP, environmental, roads)
 5. For post-search refinements ("remove region filter", "broader results"), return search_ready immediately with updated filters.
 6. Be concise and friendly. Questions should be short.
+7. Write every human-readable string in {response_language}. Keep JSON keys and enum values exactly as specified in English.{company_context}
 
 Always respond in valid JSON with this exact schema (no extra text, no markdown):
-{
+{{
   "type": "question",
   "message": "<question text>",
   "question_key": "<snake_case identifier for this question>",
   "quick_replies": ["<option1>", "<option2>", ...],
-  "filter_summary": { "<key>": "<value extracted so far>", ... }
-}
+  "filter_summary": {{ "<key>": "<value extracted so far>", ... }}
+}}
 OR:
-{
+{{
   "type": "search_ready",
   "message": "<brief confirmation like 'Looking for IT tenders in Riga...'>",
-  "filters": {
+  "filters": {{
     "keywords": ["<kw1>", ...],
     "category": "<category or null>",
     "cpv_prefixes": ["<prefix>", ...],
@@ -110,8 +211,8 @@ OR:
     "deadline_days": <number or null>,
     "sort": "<relevance|date_desc|deadline|value_desc or null>",
     "similar_companies": ["<company name>", ...] or null
-  }
-}"""
+  }}
+}}"""
 
 
 class ChatService:
@@ -120,8 +221,14 @@ class ChatService:
         self.client = OpenAI(api_key=settings.openai_api_key)
         self.model = settings.ai_model
 
-    def process(self, messages: list[dict[str, str]], my_company: Any = None) -> dict[str, Any]:
-        locale = get_locale()
+    def process(
+        self,
+        messages: list[dict[str, str]],
+        my_company: Any = None,
+        chat_locale: str | None = None,
+    ) -> dict[str, Any]:
+        request_locale = get_locale()
+        resolved_chat_locale = resolve_chat_locale(messages, chat_locale, request_locale)
         company_context = ""
         if my_company and my_company.cpv_prefixes:
             prefixes_str = ", ".join(my_company.cpv_prefixes)
@@ -136,11 +243,7 @@ class ChatService:
         openai_messages = [
             {
                 "role": "system",
-                "content": (
-                    f"{SYSTEM_PROMPT}{company_context}\n\n"
-                    f"Respond in locale '{locale}'. "
-                    "Keep all JSON keys and enum values exactly as specified in English."
-                ),
+                "content": build_system_prompt(resolved_chat_locale, company_context),
             }
         ]
         for m in messages:
@@ -157,12 +260,9 @@ class ChatService:
 
         # Guarantee quick_replies are always present for question responses
         if result.get("type") == "question" and not result.get("quick_replies"):
-            result["quick_replies"] = [
-                _("chat.fallback.quick_reply_yes"),
-                _("chat.fallback.quick_reply_no"),
-                _("chat.fallback.quick_reply_not_sure"),
-                _("chat.fallback.quick_reply_other"),
-            ]
+            result["quick_replies"] = fallback_quick_replies_for_locale(resolved_chat_locale)
+
+        result["chat_locale"] = resolved_chat_locale
 
         return result
 
@@ -185,6 +285,13 @@ CPV_CATEGORY_MAP_LV: dict[str, str] = {
 
 class SearchService:
     def get_my_activity(self, company_name: str, db: Session, reg_number: str | None = None) -> dict[str, Any]:
+        def sql_date_expr(column: str) -> str:
+            return f"""CASE
+                WHEN {column} ~ '^\\d{{4}}-\\d{{2}}-\\d{{2}}$' THEN TO_DATE({column}, 'YYYY-MM-DD')
+                WHEN {column} ~ '^\\d{{2}}\\.\\d{{2}}\\.\\d{{4}}$' THEN TO_DATE({column}, 'DD.MM.YYYY')
+                ELSE NULL
+            END"""
+
         # Prefer exact reg_number match — catches all name variants for the same legal entity
         if reg_number:
             participant_where = "cp.participant_reg_number = :reg"
@@ -199,50 +306,108 @@ class SearchService:
             stats_winner_where = "winner_name ILIKE :pattern"
             params = {"pattern": f"%{company_name}%"}
 
+        participation_sort_date_sql = f"""
+            COALESCE(
+                {sql_date_expr("NULLIF(p.submission_deadline, '')")},
+                {sql_date_expr("NULLIF(p.publication_date, '')")}
+            )
+        """
+        win_sort_date_sql = sql_date_expr("NULLIF(cr.contract_signed_date, '')")
+        win_fallback_publication_sort_sql = sql_date_expr("NULLIF(p.publication_date, '')")
+
         participation_sql = text(f"""
-            SELECT DISTINCT ON (p.procurement_id)
-                p.procurement_id,
-                p.title,
-                p.buyer,
-                p.cpv_main,
-                p.submission_deadline,
-                p.estimated_value_eur,
-                p.eis_url,
-                p.status,
-                NULL::numeric AS contract_value_eur,
-                NULL::text AS signed_date
-            FROM ckan_participants cp
-            JOIN procurements p ON p.procurement_id = cp.procurement_id
-            WHERE {participant_where}
-            ORDER BY p.procurement_id, p.publication_date DESC NULLS LAST
+            SELECT
+                participation.procurement_id,
+                participation.title,
+                participation.buyer,
+                participation.cpv_main,
+                participation.submission_deadline,
+                participation.estimated_value_eur,
+                participation.eis_url,
+                participation.status,
+                participation.contract_value_eur,
+                participation.signed_date
+            FROM (
+                SELECT DISTINCT ON (p.procurement_id)
+                    p.procurement_id,
+                    p.title,
+                    p.buyer,
+                    p.cpv_main,
+                    p.submission_deadline,
+                    p.estimated_value_eur,
+                    p.eis_url,
+                    p.status,
+                    NULL::numeric AS contract_value_eur,
+                    NULL::text AS signed_date,
+                    {participation_sort_date_sql} AS sort_date
+                FROM ckan_participants cp
+                JOIN procurements p ON p.procurement_id = cp.procurement_id
+                WHERE {participant_where}
+                ORDER BY
+                    p.procurement_id,
+                    {participation_sort_date_sql} DESC NULLS LAST
+            ) AS participation
+            ORDER BY participation.sort_date DESC NULLS LAST, participation.procurement_id DESC
             LIMIT 20
         """)
 
         wins_sql = text(f"""
-            SELECT DISTINCT ON (p.procurement_id)
-                p.procurement_id,
-                p.title,
-                p.buyer,
-                p.cpv_main,
-                p.submission_deadline,
-                p.estimated_value_eur,
-                p.eis_url,
-                p.status,
-                cr.contract_value_eur,
-                cr.contract_signed_date::text AS signed_date
-            FROM ckan_results cr
-            JOIN procurements p ON p.procurement_id = cr.procurement_id
-            WHERE {winner_where}
-            ORDER BY p.procurement_id, cr.contract_signed_date DESC NULLS LAST
+            SELECT
+                wins.procurement_id,
+                wins.title,
+                wins.buyer,
+                wins.cpv_main,
+                wins.submission_deadline,
+                wins.estimated_value_eur,
+                wins.eis_url,
+                wins.status,
+                wins.contract_value_eur,
+                wins.signed_date
+            FROM (
+                SELECT DISTINCT ON (p.procurement_id)
+                    p.procurement_id,
+                    p.title,
+                    p.buyer,
+                    p.cpv_main,
+                    p.submission_deadline,
+                    p.estimated_value_eur,
+                    p.eis_url,
+                    p.status,
+                    cr.contract_value_eur,
+                    cr.contract_signed_date::text AS signed_date,
+                    {win_sort_date_sql} AS sort_signed_date
+                FROM ckan_results cr
+                JOIN procurements p ON p.procurement_id = cr.procurement_id
+                WHERE {winner_where}
+                ORDER BY
+                    p.procurement_id,
+                    {win_sort_date_sql} DESC NULLS LAST,
+                    {win_fallback_publication_sort_sql} DESC NULLS LAST
+            ) AS wins
+            ORDER BY wins.sort_signed_date DESC NULLS LAST, wins.procurement_id DESC
             LIMIT 20
         """)
 
         stats_sql = text(f"""
+            WITH matched_participations AS (
+                SELECT DISTINCT procurement_id
+                FROM ckan_participants
+                WHERE {stats_participant_where}
+            ),
+            matched_wins AS (
+                SELECT DISTINCT procurement_id
+                FROM ckan_results
+                WHERE {stats_winner_where}
+            ),
+            matched_activity AS (
+                SELECT procurement_id FROM matched_participations
+                UNION
+                SELECT procurement_id FROM matched_wins
+            )
             SELECT
-                (SELECT COUNT(DISTINCT procurement_id) FROM ckan_participants
-                 WHERE {stats_participant_where}) AS total_participations,
-                (SELECT COUNT(DISTINCT procurement_id) FROM ckan_results
-                 WHERE {stats_winner_where}) AS total_wins,
+                (SELECT COUNT(*) FROM matched_activity)       AS total_contracts,
+                (SELECT COUNT(*) FROM matched_participations) AS total_bids,
+                (SELECT COUNT(*) FROM matched_wins)           AS total_wins,
                 (SELECT COALESCE(SUM(contract_value_eur), 0) FROM ckan_results
                  WHERE {stats_winner_where}
                    AND contract_value_eur IS NOT NULL) AS total_won_value
@@ -266,16 +431,19 @@ class SearchService:
         wins = [row_to_item(r) for r in db.execute(wins_sql, params)]
         counts = db.execute(stats_sql, params).one()
 
-        total_p = int(counts.total_participations)
+        total_contracts = int(counts.total_contracts)
+        total_bids = int(counts.total_bids)
         total_w = int(counts.total_wins)
-        win_rate = round(total_w / total_p, 3) if total_p > 0 else 0.0
+        win_rate = round(total_w / total_contracts, 3) if total_contracts > 0 else 0.0
 
         return {
             "company": company_name,
             "participations": participations,
             "wins": wins,
             "stats": {
-                "total_participations": total_p,
+                "total_contracts": total_contracts,
+                "total_participations": total_bids,
+                "total_bids": total_bids,
                 "total_wins": total_w,
                 "win_rate": win_rate,
                 "total_won_value_eur": float(counts.total_won_value),
